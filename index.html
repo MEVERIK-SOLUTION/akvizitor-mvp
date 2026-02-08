@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <title>AKVIZITOR – Rychlá kalkulačka nemovitosti</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <main class="app">
+    <header class="app-header">
+      <h1>AKVIZITOR</h1>
+      <p class="subtitle">Rychlá orientační kalkulace nemovitosti</p>
+    </header>
+
+    <section class="card">
+      <form id="calculator-form">
+
+        <div class="form-group">
+          <label for="propertyType">Typ nemovitosti</label>
+          <select id="propertyType" required>
+            <option value="">— vyber —</option>
+            <option value="byt">Byt</option>
+            <option value="dum">Rodinný dům</option>
+            <option value="pozemek">Pozemek</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="area">Plocha (m²)</label>
+          <input type="number" id="area" min="1" placeholder="např. 120" required />
+        </div>
+
+        <div class="form-group">
+          <label for="locality">Lokalita</label>
+          <select id="locality" required>
+            <option value="">— vyber —</option>
+            <option value="praha">Praha</option>
+            <option value="kraj">Krajské město</option>
+            <option value="okres">Okresní město</option>
+            <option value="venkov">Venkov</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="condition">Stav nemovitosti</label>
+          <select id="condition" required>
+            <option value="">— vyber —</option>
+            <option value="novostavba">Novostavba</option>
+            <option value="dobry">Dobrý stav</option>
+            <option value="pred_rekonstrukci">Před rekonstrukcí</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-primary">
+          Spočítat orientační cenu
+        </button>
+        <button type="button" id="resetBtn" class="btn-secondary">
+         Resetovat
+        </button>
+        
+
+      </form>
+    </section>
+
+    <section class="card result" id="result" hidden>
+  <h2>Výsledek kalkulace</h2>
+  <p id="priceOutput"></p>
+  <p id="summaryOutput" class="summary"></p>
+
+  <button id="exportJsonBtn" class="btn-primary" type="button">
+    Exportovat výsledek (JSON)
+  </button>
+</section>
+
+    <footer class="app-footer">
+      <small>MEVERIK · AKVIZITOR MVP</small>
+    </footer>
+  </main>
+
+  <!-- Script -->
+  <script src="app.js"></script>
+
+</body>
+</html>
