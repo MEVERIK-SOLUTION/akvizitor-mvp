@@ -1,129 +1,299 @@
 /* === ZÁKLAD === */
-* {
-  box-sizing: border-box;
+* { box-sizing: border-box; }
+
+:root{
+  --bg: #f5f7fa;
+  --text: #1f2933;
+  --muted: #6b7280;
+  --card: #ffffff;
+  --stroke: #e5e7eb;
+  --primary: #2563eb;
+  --primary2: #1e40af;
+  --ok: #16a34a;
 }
 
 body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background-color: #f5f7fa;
-  color: #1f2933;
+  background-color: var(--bg);
+  color: var(--text);
 }
 
-/* === LAYOUT === */
 .app {
-  max-width: 520px;
-  margin: 40px auto;
+  max-width: 1120px;
+  margin: 24px auto;
   padding: 0 16px;
 }
 
-.app-header {
-  text-align: center;
-  margin-bottom: 24px;
+/* === TOPBAR === */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom: 12px;
 }
 
-.app-header h1 {
-  margin: 0;
-  font-size: 2rem;
-  letter-spacing: 0.03em;
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.brand-mark{
+  width:44px;height:44px;border-radius:12px;
+  display:grid;place-items:center;
+  background: rgba(37,99,235,.12);
+  color: var(--primary);
+  font-weight: 800;
+}
+.brand-text h1{
+  margin:0;
+  font-size: 1.35rem;
+  letter-spacing: .02em;
+}
+.subtitle{
+  margin:2px 0 0;
+  color: var(--muted);
+  font-size: .92rem;
 }
 
-.subtitle {
-  margin-top: 4px;
-  color: #6b7280;
-  font-size: 0.95rem;
+.project-pill{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  background: var(--card);
+  border-radius: 999px;
+  box-shadow: 0 6px 16px rgba(0,0,0,.06);
+}
+.project-pill .dot{
+  width:10px;height:10px;border-radius:999px;background: var(--ok);
+}
+.pill-title{ font-weight: 700; }
+.pill-btn{
+  border: 1px solid var(--stroke);
+  background: transparent;
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+/* === TABS === */
+.tabs{
+  display:flex;
+  gap:8px;
+  flex-wrap: wrap;
+  margin: 12px 0 16px;
+}
+.tab{
+  border: 1px solid var(--stroke);
+  background: var(--card);
+  padding: 10px 12px;
+  border-radius: 999px;
+  cursor:pointer;
+  font-weight: 650;
+  color: #111827;
+}
+.tab.is-active{
+  border-color: rgba(37,99,235,.35);
+  background: rgba(37,99,235,.10);
+  color: var(--primary);
+}
+
+/* === LAYOUT === */
+.layout{
+  display:grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+}
+@media (max-width: 960px){
+  .layout{ grid-template-columns: 1fr; }
 }
 
 /* === KARTY === */
 .card {
-  background: #ffffff;
-  border-radius: 10px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  background: var(--card);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
 }
+.card-inner{
+  background: rgba(17,24,39,.02);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.view-header{ margin-bottom: 14px; }
+.h2{ margin: 0 0 6px; font-size: 1.05rem; }
+.h3{ margin: 0 0 10px; font-size: 1rem; }
+.muted{ color: var(--muted); margin: 0; }
+.small{ font-size: .88rem; }
+.hint{ color: var(--muted); font-size: .9rem; margin-top: 14px; }
 
 /* === FORMULÁŘ === */
-.form-group {
-  margin-bottom: 16px;
+.form{ margin-top: 10px; }
+.form-row{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 560px){
+  .form-row{ grid-template-columns: 1fr; }
 }
 
+.form-group { margin-bottom: 14px; }
 label {
   display: block;
   margin-bottom: 6px;
-  font-weight: 600;
+  font-weight: 650;
   font-size: 0.9rem;
 }
-
-input,
-select {
+input, select {
   width: 100%;
   padding: 10px 12px;
   font-size: 1rem;
-  border-radius: 6px;
+  border-radius: 10px;
   border: 1px solid #d1d5db;
+  background: #fff;
 }
-
-input:focus,
-select:focus {
+input:focus, select:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.12);
 }
 
-/* === TLAČÍTKO === */
-.btn-primary {
+/* === BUTTONS === */
+.btn-primary, .btn-secondary{
   width: 100%;
   padding: 12px;
   margin-top: 8px;
   font-size: 1rem;
-  font-weight: 600;
-  background-color: #2563eb;
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
+  font-weight: 700;
+  border-radius: 12px;
   cursor: pointer;
 }
+.btn-primary{
+  background-color: var(--primary);
+  color: #fff;
+  border: none;
+}
+.btn-primary:hover{ background-color: var(--primary2); }
 
-.btn-primary:hover {
-  background-color: #1e40af;
+.btn-secondary{
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+.btn-secondary:hover{ background: rgba(37, 99, 235, 0.08); }
+
+.filelike{ display:block; text-align:center; user-select:none; }
+
+.stack{ display:grid; gap:10px; }
+
+/* === LISTY / ITEMY === */
+.list{ display:grid; gap:10px; margin-top: 10px; }
+.item{
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 12px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+}
+.item-title{ font-weight: 800; }
+.item-meta{ color: var(--muted); font-size: .9rem; margin-top: 4px; }
+.item-actions{ display:flex; gap:8px; flex-wrap: wrap; }
+.btn-mini{
+  border: 1px solid var(--stroke);
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor:pointer;
+  font-weight: 650;
+}
+.btn-mini.danger{ border-color: rgba(239,68,68,.35); color: #b91c1c; }
+.btn-mini.primary{ border-color: rgba(37,99,235,.35); color: var(--primary); }
+
+.divider{
+  height: 1px;
+  background: var(--stroke);
+  margin: 16px 0;
 }
 
-/* === VÝSLEDEK === */
-.result h2 {
-  margin-top: 0;
+.notice{
+  border: 1px solid rgba(37,99,235,.25);
+  background: rgba(37,99,235,.07);
+  padding: 12px;
+  border-radius: 12px;
 }
 
+.placeholder{
+  border: 1px dashed var(--stroke);
+  background: rgba(17,24,39,.02);
+  padding: 14px;
+  border-radius: 12px;
+}
+
+/* === KPI === */
+.summary-row{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.kpi{
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+}
+.kpi-label{ color: var(--muted); font-size: .85rem; }
+.kpi-value{ font-size: 1.25rem; font-weight: 900; }
+
+/* === CHIPS === */
+.chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top: 10px; }
+.chip{
+  border: 1px solid var(--stroke);
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: .9rem;
+  color: #111827;
+}
+
+/* === CHECKLIST === */
+.checklist{ list-style: none; padding: 0; margin: 10px 0 0; display:grid; gap:10px; }
+.chk{
+  display:inline-block;
+  width: 14px; height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--stroke);
+  margin-right: 8px;
+  vertical-align: -2px;
+  background: #fff;
+}
+.chk.is-on{
+  border-color: rgba(22,163,74,.35);
+  background: rgba(22,163,74,.18);
+}
+
+/* === VÝSLEDEK (ODHAD) === */
+.result h3 { margin-top: 0; }
 #priceOutput {
-  font-size: 1.4rem;
-  font-weight: 700;
-  margin: 12px 0;
+  font-size: 1.35rem;
+  font-weight: 900;
+  margin: 10px 0;
 }
-
-.summary {
-  color: #374151;
-  line-height: 1.5;
-}
+.summary { color: #374151; line-height: 1.5; }
 
 /* === FOOTER === */
 .app-footer {
   text-align: center;
-  margin-top: 24px;
+  margin-top: 16px;
   color: #9ca3af;
-  font-size: 0.8rem;
-}
-.btn-secondary {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  font-size: 1rem;
-  font-weight: 600;
-  background: transparent;
-  color: #2563eb;
-  border: 1px solid #2563eb;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.btn-secondary:hover {
-  background: rgba(37, 99, 235, 0.08);
+  font-size: 0.85rem;
 }

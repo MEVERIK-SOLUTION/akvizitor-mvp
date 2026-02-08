@@ -2,87 +2,354 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8" />
-  <title>AKVIZITOR – Rychlá kalkulačka nemovitosti</title>
+  <title>AKVIZITOR – Terénní a akviziční manager</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- Styles -->
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
   <main class="app">
-    <header class="app-header">
-      <h1>AKVIZITOR</h1>
-      <p class="subtitle">Rychlá orientační kalkulace nemovitosti</p>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">A</div>
+        <div class="brand-text">
+          <h1>AKVIZITOR</h1>
+          <p class="subtitle">Terénní a akviziční manager pro realitní makléře</p>
+        </div>
+      </div>
+
+      <div class="project-pill" id="currentProjectPill" hidden>
+        <span class="dot"></span>
+        <span class="pill-title" id="currentProjectTitle">Bez projektu</span>
+        <button class="pill-btn" id="closeProjectBtn" type="button" title="Zavřít projekt">Zavřít</button>
+      </div>
     </header>
 
-    <section class="card">
-      <form id="calculator-form">
+    <nav class="tabs" aria-label="Navigace">
+      <button class="tab is-active" data-view="project" type="button">Projekt</button>
+      <button class="tab" data-view="collect" type="button">Sběr</button>
+      <button class="tab" data-view="plan2d" type="button">2D</button>
+      <button class="tab" data-view="view3d" type="button">3D</button>
+      <button class="tab" data-view="outputs" type="button">Výstupy</button>
+      <button class="tab" data-view="estimate" type="button">Odhad</button>
+    </nav>
 
-        <div class="form-group">
-          <label for="propertyType">Typ nemovitosti</label>
-          <select id="propertyType" required>
-            <option value="">— vyber —</option>
-            <option value="byt">Byt</option>
-            <option value="dum">Rodinný dům</option>
-            <option value="pozemek">Pozemek</option>
-          </select>
+    <div class="layout">
+      <aside class="sidebar card">
+        <h2 class="h2">Checklist</h2>
+        <ul class="checklist" id="checklist">
+          <li><span class="chk" data-chk="project"></span> Založen projekt</li>
+          <li><span class="chk" data-chk="rooms"></span> Přidány místnosti</li>
+          <li><span class="chk" data-chk="photos"></span> Fotky (volitelné)</li>
+          <li><span class="chk" data-chk="plan2d"></span> 2D půdorys (další krok)</li>
+          <li><span class="chk" data-chk="outputs"></span> Export výstupů</li>
+        </ul>
+
+        <div class="divider"></div>
+
+        <h2 class="h2">Rychlé akce</h2>
+        <div class="stack">
+          <button class="btn-secondary" id="quickExportProjectBtn" type="button">Export projektu (JSON)</button>
+          <label class="btn-secondary filelike">
+            Import projektu (JSON)
+            <input id="quickImportInput" type="file" accept="application/json" hidden />
+          </label>
         </div>
 
-        <div class="form-group">
-          <label for="area">Plocha (m²)</label>
-          <input type="number" id="area" min="1" placeholder="např. 120" required />
-        </div>
+        <p class="hint">
+          Tip: bez backendu ukládáme lokálně a posíláme si projekty přes JSON. Později se to přepne na cloud.
+        </p>
+      </aside>
 
-        <div class="form-group">
-          <label for="locality">Lokalita</label>
-          <select id="locality" required>
-            <option value="">— vyber —</option>
-            <option value="praha">Praha</option>
-            <option value="kraj">Krajské město</option>
-            <option value="okres">Okresní město</option>
-            <option value="venkov">Venkov</option>
-          </select>
-        </div>
+      <section class="main">
 
-        <div class="form-group">
-          <label for="condition">Stav nemovitosti</label>
-          <select id="condition" required>
-            <option value="">— vyber —</option>
-            <option value="novostavba">Novostavba</option>
-            <option value="dobry">Dobrý stav</option>
-            <option value="pred_rekonstrukci">Před rekonstrukcí</option>
-          </select>
-        </div>
+        <!-- VIEW: PROJEKT -->
+        <section class="view card" id="view-project">
+          <div class="view-header">
+            <h2 class="h2">Projekt</h2>
+            <p class="muted">Založ, otevři a spravuj projekty. Tohle je “domov” celé akvizice.</p>
+          </div>
 
-        <button type="submit" class="btn-primary">
-          Spočítat orientační cenu
-        </button>
-        <button type="button" id="resetBtn" class="btn-secondary">
-         Resetovat
-        </button>
-        
+          <div class="grid2">
+            <div>
+              <h3 class="h3">Založit nový projekt</h3>
+              <form id="projectCreateForm" class="form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="projName">Název projektu</label>
+                    <input id="projName" type="text" placeholder="např. Byt – Novákovi" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="projType">Typ nemovitosti</label>
+                    <select id="projType" required>
+                      <option value="">— vyber —</option>
+                      <option value="byt">Byt</option>
+                      <option value="dum">Rodinný dům</option>
+                      <option value="pozemek">Pozemek</option>
+                      <option value="komerce">Komerce</option>
+                    </select>
+                  </div>
+                </div>
 
-      </form>
-    </section>
+                <div class="form-group">
+                  <label for="projAddress">Adresa (volitelné)</label>
+                  <input id="projAddress" type="text" placeholder="Ulice, město…" />
+                </div>
 
-    <section class="card result" id="result" hidden>
-  <h2>Výsledek kalkulace</h2>
-  <p id="priceOutput"></p>
-  <p id="summaryOutput" class="summary"></p>
+                <button class="btn-primary" type="submit">Vytvořit projekt</button>
+              </form>
 
-  <button id="exportJsonBtn" class="btn-primary" type="button">
-    Exportovat výsledek (JSON)
-  </button>
-</section>
+              <div class="divider"></div>
 
-    <footer class="app-footer">
-      <small>MEVERIK · AKVIZITOR MVP</small>
-    </footer>
+              <h3 class="h3">Import projektu</h3>
+              <p class="muted">Nahraj JSON projektu (např. od juniora pro kontrolu seniora).</p>
+              <label class="btn-secondary filelike">
+                Vybrat JSON soubor
+                <input id="importProjectInput" type="file" accept="application/json" hidden />
+              </label>
+              <p class="small muted" id="importStatus"></p>
+            </div>
+
+            <div>
+              <h3 class="h3">Moje projekty</h3>
+              <div id="projectsList" class="list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW: SBĚR -->
+        <section class="view card" id="view-collect" hidden>
+          <div class="view-header">
+            <h2 class="h2">Sběr dat</h2>
+            <p class="muted">Formuláře > kreslení. Nejprve čísla, pak půdorys.</p>
+          </div>
+
+          <div class="notice" id="noProjectNotice" hidden>
+            Nejdřív otevři nebo založ projekt v záložce <b>Projekt</b>.
+          </div>
+
+          <div id="collectContent" hidden>
+            <div class="grid2">
+              <!-- FLOORS: výběr patra + správa -->
+           <div class="card-inner" style="margin-top:0;">
+            <div class="form-row">
+             <div class="form-group">
+              <label for="floorSelect">Patro</label>
+              <select id="floorSelect"></select>
+           </div>
+
+           <div class="form-group">
+            <label for="newFloorName">Přidat patro</label>
+            <div style="display:flex; gap:10px;">
+             <input id="newFloorName" type="text" placeholder="např. Suterén / Podkroví / 2. NP" />
+             <button id="addFloorBtn" class="btn-mini primary" type="button" style="width:auto; white-space:nowrap;">Přidat</button>
+           </div>
+         </div>
+       </div>
+
+       <div class="item-actions" style="justify-content:flex-start; margin-top:6px;">
+        <button id="renameFloorBtn" class="btn-mini" type="button">Přejmenovat patro</button>
+        <button id="deleteFloorBtn" class="btn-mini danger" type="button">Smazat patro</button>
+       </div>
+
+       <p class="small muted" id="floorHint" style="margin-top:8px;"></p>
+     </div>
+              <div>
+                <h3 class="h3">Přidat místnost</h3>
+                <form id="roomForm" class="form">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="roomName">Název</label>
+                      <input id="roomName" type="text" placeholder="např. Obývák" required />
+                    </div>
+                    <div class="form-group">
+                      <label for="roomHeight">Výška (m) – volitelné</label>
+                      <input id="roomHeight" type="number" min="0" step="0.01" placeholder="2.60" />
+                    </div>
+                  </div>
+
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="roomLen">Délka (m)</label>
+                      <input id="roomLen" type="number" min="0" step="0.01" placeholder="4.20" required />
+                    </div>
+                    <div class="form-group">
+                      <label for="roomWid">Šířka (m)</label>
+                      <input id="roomWid" type="number" min="0" step="0.01" placeholder="3.10" required />
+                    </div>
+                  </div>
+
+                  <button class="btn-primary" type="submit">Přidat místnost</button>
+                </form>
+              </div>
+
+              <div>
+                <h3 class="h3">Seznam místností</h3>
+                <div class="summary-row">
+                  <div class="kpi">
+                    <div class="kpi-label">Místností</div>
+                    <div class="kpi-value" id="kpiRooms">0</div>
+                  </div>
+                  <div class="kpi">
+                    <div class="kpi-label">Celkem m²</div>
+                    <div class="kpi-value" id="kpiArea">0</div>
+                  </div>
+                </div>
+
+                <div id="roomsList" class="list"></div>
+
+                <div class="divider"></div>
+
+                <h3 class="h3">Fotky (přiřazení k místnosti)</h3>
+                <p class="muted small">
+  Vyber místnost a nahraj fotky. V exportu se uloží s <b>roomId</b> (párování do DB).
+              </p>
+          
+            <div class="form-row">
+             <div class="form-group">
+              <label for="photoRoomSelect">Přiřadit k místnosti</label>
+              <select id="photoRoomSelect"></select>
+           </div>
+           <div class="form-group">
+            <label>&nbsp;</label>
+            <label class="btn-secondary filelike" style="margin-top:0;">
+             Přidat fotky
+            <input id="photosInput" type="file" accept="image/*" multiple hidden />
+         </label>
+      </div>
+   </div>
+
+<div id="photosList" class="chips"></div>
+
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW: 2D -->
+        <section class="view card" id="view-plan2d" hidden>
+          <div class="view-header">
+            <h2 class="h2">2D půdorys</h2>
+            <p class="muted">Zdroj pravdy. V další iteraci sem dáme editor stěn, rohů a otvorů.</p>
+          </div>
+          <div class="placeholder">
+            <p><b>Stav:</b> připraveno. Další krok: z místností vytvořit jednoduché bloky a umístit je na plátno.</p>
+            <ul>
+              <li>V1: obdélníky místností + kóty</li>
+              <li>V1.1: okna/dveře na stěně</li>
+              <li>V1.2: atypy (L-tvar, polygon)</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- VIEW: 3D -->
+        <section class="view card" id="view-view3d" hidden>
+          <div class="view-header">
+            <h2 class="h2">3D kontrola</h2>
+            <p class="muted">3D není CAD – je to rychlá validace proporcí. Přijde po 2D.</p>
+          </div>
+          <div class="placeholder">
+            <p><b>Stav:</b> připraveno. Po 2D půdorysu uděláme extruzi do jednoduchého 3D.</p>
+          </div>
+        </section>
+
+        <!-- VIEW: VÝSTUPY -->
+        <section class="view card" id="view-outputs" hidden>
+          <div class="view-header">
+            <h2 class="h2">Výstupy</h2>
+            <p class="muted">Export projektu, souhrny, později PDF a PNG.</p>
+          </div>
+
+          <div class="notice" id="noProjectNoticeOutputs" hidden>
+            Nejdřív otevři nebo založ projekt v záložce <b>Projekt</b>.
+          </div>
+
+          <div id="outputsContent" hidden>
+            <div class="stack">
+              <button class="btn-primary" id="exportProjectBtn" type="button">Export projektu (JSON)</button>
+              <button class="btn-secondary" id="exportRoomsCsvBtn" type="button">Export místností (CSV)</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <h3 class="h3">Souhrn projektu</h3>
+            <div id="outputsSummary" class="placeholder"></div>
+          </div>
+        </section>
+
+        <!-- VIEW: ODHAD (tvůj původní modul) -->
+        <section class="view card" id="view-estimate" hidden>
+          <div class="view-header">
+            <h2 class="h2">Odhad ceny</h2>
+            <p class="muted">Zjednodušený model (prozatím). Uloží se do projektu jako “calc”.</p>
+          </div>
+
+          <section class="card-inner">
+            <form id="calculator-form">
+
+              <div class="form-group">
+                <label for="propertyType">Typ nemovitosti</label>
+                <select id="propertyType" required>
+                  <option value="">— vyber —</option>
+                  <option value="byt">Byt</option>
+                  <option value="dum">Rodinný dům</option>
+                  <option value="pozemek">Pozemek</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="area">Plocha (m²)</label>
+                <input type="number" id="area" min="1" placeholder="např. 120" required />
+              </div>
+
+              <div class="form-group">
+                <label for="locality">Lokalita</label>
+                <select id="locality" required>
+                  <option value="">— vyber —</option>
+                  <option value="praha">Praha</option>
+                  <option value="kraj">Krajské město</option>
+                  <option value="okres">Okresní město</option>
+                  <option value="venkov">Venkov</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="condition">Stav nemovitosti</label>
+                <select id="condition" required>
+                  <option value="">— vyber —</option>
+                  <option value="novostavba">Novostavba</option>
+                  <option value="dobry">Dobrý stav</option>
+                  <option value="pred_rekonstrukci">Před rekonstrukcí</option>
+                </select>
+              </div>
+
+              <button type="submit" class="btn-primary">Spočítat orientační cenu</button>
+              <button type="button" id="resetBtn" class="btn-secondary">Resetovat</button>
+
+            </form>
+          </section>
+
+          <section class="card-inner result" id="result" hidden>
+            <h3 class="h3">Výsledek kalkulace</h3>
+            <p id="priceOutput"></p>
+            <p id="summaryOutput" class="summary"></p>
+
+            <div class="stack">
+              <button id="exportJsonBtn" class="btn-secondary" type="button">Exportovat výsledek (JSON)</button>
+              <button id="saveCalcToProjectBtn" class="btn-primary" type="button">Uložit do projektu</button>
+            </div>
+            <p class="small muted" id="saveCalcStatus"></p>
+          </section>
+
+        </section>
+
+        <footer class="app-footer">
+          <small>MEVERIK · AKVIZITOR MVP</small>
+        </footer>
+      </section>
+    </div>
   </main>
 
-  <!-- Script -->
   <script src="app.js"></script>
-
 </body>
 </html>
