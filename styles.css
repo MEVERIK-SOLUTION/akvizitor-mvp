@@ -165,6 +165,27 @@ input:focus, select:focus {
   box-shadow: 0 0 0 3px rgba(37,99,235,.12);
 }
 
+/* small helper utilities used in templates */
+.row{ display:flex; gap:12px; align-items:center; }
+.field{ display:flex; flex-direction:column; }
+.form-row .form-group{ min-width:0; }
+
+/* Floor & room control alignment tweaks */
+#floorSelect { max-width: 260px; }
+#floorHeight { max-width: 160px; }
+#saveFloorHeightBtn { align-self: center; padding: 8px 10px; height: 38px; }
+#newFloorName { width: 100%; }
+#addFloorBtn { height: 38px; }
+
+/* Room override checkbox alignment */
+#roomHeightOverrideToggle { margin-right: 8px; transform: translateY(1px); }
+#roomHeight { box-sizing: border-box; }
+
+/* Reduce vertical gaps in floor selection area */
+.card-inner > form { gap: 8px; }
+.card-inner .form-row { gap: 10px; }
+.item-actions { margin-top: 0; }
+
 /* === BUTTONS === */
 .btn-primary, .btn-secondary{
   width: 100%;

@@ -131,51 +131,68 @@
           <div id="collectContent" hidden>
             <div class="grid2">
               <!-- FLOORS: výběr patra + správa -->
-           <div class="card-inner" style="margin-top:0;">
-            <div class="form-row">
-             <div class="form-group">
-              <label for="floorSelect">Patro</label>
-              <select id="floorSelect"></select>
-           </div>
-
-           <div class="form-group">
-            <label for="newFloorName">Přidat patro</label>
-            <div style="display:flex; gap:10px;">
-             <input id="newFloorName" type="text" placeholder="např. Suterén / Podkroví / 2. NP" />
-             <button id="addFloorBtn" class="btn-mini primary" type="button" style="width:auto; white-space:nowrap;">Přidat</button>
-           </div>
-         </div>
-       </div>
-
-       <div class="item-actions" style="justify-content:flex-start; margin-top:6px;">
-        <button id="renameFloorBtn" class="btn-mini" type="button">Přejmenovat patro</button>
-        <button id="deleteFloorBtn" class="btn-mini danger" type="button">Smazat patro</button>
-       </div>
-
-       <p class="small muted" id="floorHint" style="margin-top:8px;"></p>
-     </div>
-              <div>
-                <h3 class="h3">Přidat místnost</h3>
+              <div class="card-inner" style="margin-top:0;">
                 <form id="roomForm" class="form">
                   <div class="form-row">
                     <div class="form-group">
-                      <label for="roomName">Název</label>
-                      <input id="roomName" type="text" placeholder="např. Obývák" required />
+                      <label for="floorSelect">Patro</label>
+                      <select id="floorSelect"></select>
                     </div>
                     <div class="form-group">
-                      <label for="roomHeight">Výška (m) – volitelné</label>
-                      <input id="roomHeight" type="number" min="0" step="0.01" placeholder="2.60" />
+                      <label for="floorHeight">Výška patra (m)</label>
+                      <div style="display:flex; gap:10px; align-items:center;">
+                        <input id="floorHeight" type="number" step="0.01" min="0" placeholder="např. 2.60">
+                        <button class="btn-mini" id="saveFloorHeightBtn" type="button">Uložit výšku patra</button>
+                      </div>
+                      <div class="hint">Výchozí výška pro všechny místnosti na patře. Pokud není vyplněná, 3D model se zatím nevytvoří (2D půdorys ano).</div>
+                    </div>
+                  </div>
+
+                  <div class="form-row" style="margin-top:6px;">
+                    <div class="form-group">
+                      <label for="newFloorName">Přidat patro</label>
+                      <div style="display:flex; gap:10px;">
+                        <input id="newFloorName" type="text" placeholder="např. Suterén / Podkroví / 2. NP" />
+                        <button id="addFloorBtn" class="btn-mini primary" type="button" style="width:auto; white-space:nowrap;">Přidat</button>
+                      </div>
+                    </div>
+                    <div class="item-actions" style="justify-content:flex-start; margin-top:20px;">
+                      <button id="renameFloorBtn" class="btn-mini" type="button">Přejmenovat patro</button>
+                      <button id="deleteFloorBtn" class="btn-mini danger" type="button">Smazat patro</button>
+                    </div>
+                  </div>
+
+                  <p class="small muted" id="floorHint" style="margin-top:8px;"></p>
+
+                  <div class="divider"></div>
+
+                  <h3 class="h3">Přidat místnost</h3>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="roomName">Název místnosti</label>
+                      <input id="roomName" type="text" placeholder="Obývací pokoj" />
+                    </div>
+                    <div class="form-group">
+                      <label for="roomLen">Délka (m)</label>
+                      <input id="roomLen" type="number" min="0" step="0.01" placeholder="např. 4.20" required />
                     </div>
                   </div>
 
                   <div class="form-row">
                     <div class="form-group">
-                      <label for="roomLen">Délka (m)</label>
-                      <input id="roomLen" type="number" min="0" step="0.01" placeholder="4.20" required />
+                      <label for="roomWid">Šířka (m)</label>
+                      <input id="roomWid" type="number" min="0" step="0.01" placeholder="např. 3.10" required />
                     </div>
                     <div class="form-group">
-                      <label for="roomWid">Šířka (m)</label>
-                      <input id="roomWid" type="number" min="0" step="0.01" placeholder="3.10" required />
+                      <label for="">Výška místnosti</label>
+                      <div style="display:flex; gap:10px; align-items:center;">
+                        <input id="roomHeightOverrideToggle" type="checkbox" style="width:auto; height:auto;" />
+                        <label for="roomHeightOverrideToggle" style="margin:0;">Místnost má jinou výšku než patro</label>
+                      </div>
+                      <div style="margin-top:8px;">
+                        <input id="roomHeight" type="number" step="0.01" min="0" placeholder="např. 2.60" style="display:none; width: 100%;" />
+                      </div>
+                      <div class="hint">Použij jen pro atypické místnosti (např. otevřený strop, schodiště).</div>
                     </div>
                   </div>
 

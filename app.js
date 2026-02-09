@@ -128,6 +128,8 @@
   const renameFloorBtn = $("#renameFloorBtn");
   const deleteFloorBtn = $("#deleteFloorBtn");
   const floorHint = $("#floorHint");
+  const floorHeight = $("#floorHeight");
+  const saveFloorHeightBtn = $("#saveFloorHeightBtn");
 
   const photoRoomSelect = $("#photoRoomSelect");
 
@@ -187,7 +189,8 @@
         updatedAt: now,
         status: "draft",
       },
-      floors: [{ id: safeId(), name: "Přízemí", rooms: [] }],
+      // floors: each floor now may carry an optional `height` (number or null)
+      floors: [{ id: safeId(), name: "Přízemí", rooms: [], height: null }],
       media: {
         photos: [],
       },
@@ -233,7 +236,8 @@
     if (!p) return;
     const nm = String(name || "").trim();
     if (!nm) return;
-    const floor = { id: safeId(), name: nm, rooms: [] };
+    // New floors default to `height: null` (inherit / unspecified)
+    const floor = { id: safeId(), name: nm, rooms: [], height: null };
     p.floors = p.floors || [];
     p.floors.push(floor);
     p.meta.updatedAt = new Date().toISOString();
@@ -301,6 +305,32 @@
     }
     if (renameFloorBtn) renameFloorBtn.onclick = renameCurrentFloor;
     if (deleteFloorBtn) deleteFloorBtn.onclick = deleteCurrentFloor;
+
+    // Ensure floor height input reflects current floor and provide save handler
+    const f = getCurrentFloor(project);
+    if (f && typeof floorHeight !== 'undefined' && floorHeight !== null) {
+      // show numeric value or empty if null/undefined
+      floorHeight.value = (f.height !== null && f.height !== undefined) ? String(f.height) : "";
+    }
+    if (saveFloorHeightBtn) {
+      saveFloorHeightBtn.onclick = () => {
+        const p2 = getCurrentProject();
+        if (!p2) return;
+        const cf = getCurrentFloor(p2);
+        if (!cf) return;
+        const raw = floorHeight?.value;
+        // store number or null
+        const v = (raw === null || raw === undefined || String(raw).trim() === "") ? null : Number(raw);
+        if (v !== null && (!Number.isFinite(v) || v < 0)) {
+          alert('Zadej platnou výšku patra (kladné číslo nebo prázdné).');
+          return;
+        }
+        cf.height = v === null ? null : Math.round(v * 100) / 100;
+        p2.meta.updatedAt = new Date().toISOString();
+        upsertProject(p2);
+        renderCollectView();
+      };
+    }
   }
 
   // ---------- render helpers ----------
@@ -382,13 +412,15 @@
       if (!rooms.length) {
         roomsList.innerHTML = `<div class="placeholder">Zatím žádné místnosti. Přidej první vlevo.</div>`;
       } else {
+        // Show rooms, using effective height: room.height (override) or floor.height
         roomsList.innerHTML = rooms
           .map((r) => {
+            const effH = (r.height !== null && r.height !== undefined) ? r.height : (floor?.height ?? null);
             return `
           <div class="item">
             <div>
               <div class="item-title">${escapeHtml(r.name)}</div>
-              <div class="item-meta">${r.area.toLocaleString("cs-CZ")} m² · ${r.length}×${r.width} m${r.height ? ` · výška ${r.height} m` : ""} · fotek: ${(p.media?.photos || []).filter(ph => ph.roomId === r.id).length}</div>
+              <div class="item-meta">${r.area.toLocaleString("cs-CZ")} m² · ${r.length}×${r.width} m${effH ? ` · výška ${effH} m` : ""} · fotek: ${(p.media?.photos || []).filter(ph => ph.roomId === r.id).length}</div>
             </div>
             <div class="item-actions">
               <button class="btn-mini danger" data-room-del="${r.id}">Smazat</button>
@@ -680,22 +712,45 @@
   }
 
   if (roomForm) {
+    // Toggle room height input visibility based on checkbox
+    const roomOverrideToggle = document.getElementById("roomHeightOverrideToggle");
+    const roomHeightInput = document.getElementById("roomHeight");
+    if (roomOverrideToggle && roomHeightInput) {
+      roomOverrideToggle.addEventListener("change", () => {
+        if (roomOverrideToggle.checked) {
+          roomHeightInput.style.display = "block";
+        } else {
+          roomHeightInput.style.display = "none";
+          roomHeightInput.value = "";
+        }
+      });
+      // initialize state
+      if (!roomOverrideToggle.checked) roomHeightInput.style.display = "none";
+    }
+
     roomForm.addEventListener("submit", (e) => {
       e.preventDefault();
       const p = getCurrentProject();
       if (!p) return;
 
+      const overrideChecked = !!(document.getElementById("roomHeightOverrideToggle")?.checked);
+      const heightVal = overrideChecked ? (roomHeightInput?.value || "") : null;
+
       addRoom({
         name: roomName?.value || "",
         length: roomLen?.value || "",
         width: roomWid?.value || "",
-        height: roomHeight?.value || "",
+        height: heightVal,
       });
 
       if (roomName) roomName.value = "";
       if (roomLen) roomLen.value = "";
       if (roomWid) roomWid.value = "";
-      if (roomHeight) roomHeight.value = "";
+      if (roomHeightInput) {
+        roomHeightInput.value = "";
+        roomHeightInput.style.display = "none";
+      }
+      if (roomOverrideToggle) roomOverrideToggle.checked = false;
     });
   }
 
