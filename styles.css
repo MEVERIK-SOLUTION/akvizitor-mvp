@@ -311,6 +311,97 @@ input:focus, select:focus {
 }
 .summary { color: #374151; line-height: 1.5; }
 
+/* === 2D EDITOR === */
+.plan2d-toolbar {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: rgba(17,24,39,.02);
+  flex-wrap: wrap;
+}
+.toolbar-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.9rem;
+}
+.toolbar-group label {
+  margin: 0;
+  font-weight: 650;
+}
+.plan2d-canvas-frame {
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  overflow: auto;
+  background: #fafafa;
+  height: 600px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.plan2d-canvas-frame svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 100%;
+}
+.plan2d-detail-panel {
+  max-height: 600px;
+  overflow-y: auto;
+  border: 1px solid var(--stroke);
+  padding: 12px;
+}
+.plan2d-room-box {
+  fill: rgba(37, 99, 235, 0.08);
+  stroke: var(--primary);
+  stroke-width: 1.5;
+  cursor: grab;
+  pointer-events: all;
+  user-select: none;
+}
+.plan2d-room-box.selected {
+  fill: rgba(37, 99, 235, 0.15);
+  stroke: var(--primary);
+  stroke-width: 2;
+}
+.plan2d-room-box.dragging {
+  cursor: grabbing;
+  fill: rgba(37, 99, 235, 0.25);
+}
+.plan2d-room-box.is-selected {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+}
+.plan2d-room-text {
+  font-size: 12px;
+  font-weight: 650;
+  pointer-events: none;
+  user-select: none;
+}
+.plan2d-door {
+  fill: rgba(220, 38, 38, 0.6);
+  stroke: #991b1b;
+  stroke-width: 1;
+  cursor: pointer;
+}
+.plan2d-door:hover {
+  fill: rgba(220, 38, 38, 0.9);
+}
+.plan2d-door.selectable-link {
+  stroke: #f59e0b;
+  stroke-width: 2;
+}
+.plan2d-link {
+  stroke: rgba(59, 130, 246, 0.5);
+  stroke-width: 2;
+  stroke-dasharray: 4,4;
+  pointer-events: none;
+}
+
 /* === FOOTER === */
 .app-footer {
   text-align: center;

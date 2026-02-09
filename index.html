@@ -246,16 +246,51 @@
         <!-- VIEW: 2D -->
         <section class="view card" id="view-plan2d" hidden>
           <div class="view-header">
-            <h2 class="h2">2D půdorys</h2>
-            <p class="muted">Zdroj pravdy. V další iteraci sem dáme editor stěn, rohů a otvorů.</p>
+            <h2 class="h2">2D půdorys – Editor</h2>
+            <p class="muted">Interaktivní editor – táhněte místnosti, připojujte dveře, upravujte layout.</p>
           </div>
-          <div class="placeholder">
-            <p><b>Stav:</b> připraveno. Další krok: z místností vytvořit jednoduché bloky a umístit je na plátno.</p>
-            <ul>
-              <li>V1: obdélníky místností + kóty</li>
-              <li>V1.1: okna/dveře na stěně</li>
-              <li>V1.2: atypy (L-tvar, polygon)</li>
-            </ul>
+
+          <div id="noRoomsNotice2D" class="notice" hidden>
+            Na tomto patře nejsou žádné místnosti. Přidej je v záložce <b>Sběr</b>.
+          </div>
+
+          <div id="plan2dContent" hidden>
+            <!-- TOOLBAR -->
+            <div class="plan2d-toolbar">
+              <div class="toolbar-group">
+                <label>Zoom</label>
+                <input id="plan2dZoomSlider" type="range" min="0.25" max="3" step="0.25" value="1" style="width:120px;">
+                <span id="plan2dZoomLabel">100%</span>
+                <button id="plan2dZoomReset" class="btn-mini" type="button">Reset</button>
+              </div>
+              <div class="toolbar-group">
+                <label>
+                  <input id="plan2dSnapToggle" type="checkbox" checked style="width:auto; height:auto;">
+                  Snap (0.15m)
+                </label>
+              </div>
+              <div class="toolbar-group">
+                <button id="plan2dExportPng" class="btn-mini secondary" type="button">Export PNG</button>
+              </div>
+            </div>
+
+            <!-- CANVAS -->
+            <div style="display:grid; grid-template-columns: 1fr 280px; gap:12px; margin-top:12px;">
+              <div class="plan2d-canvas-frame">
+                <svg id="plan2dSvg" style="background:#fafafa; border:1px solid var(--stroke); cursor:move; touch-action:none;"></svg>
+              </div>
+
+              <!-- DETAIL PANEL -->
+              <div id="plan2dPanel" class="plan2d-detail-panel card-inner">
+                <div id="plan2dPanelContent">
+                  <p class="muted small">Klikni na místnost pro editaci.</p>
+                </div>
+              </div>
+            </div>
+
+            <p class="hint" style="margin-top:12px; font-size:0.85rem;">
+              <b>Ovládání:</b> Táhni místnosti myší · <b>Ctrl + Scroll</b> = zoom · <b>Space + táhnutí</b> = pan · Klik na dveře=přiřadit odkaz
+            </p>
           </div>
         </section>
 
