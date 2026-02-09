@@ -70,6 +70,10 @@
             <p class="muted">Založ, otevři a spravuj projekty. Tohle je “domov” celé akvizice.</p>
           </div>
 
+          <div style="margin-top:12px">
+            <button id="continueToCollect" class="btn-primary">Pokračovat → Sběr</button>
+          </div>
+
           <div class="grid2">
             <div>
               <h3 class="h3">Založit nový projekt</h3>
@@ -243,6 +247,10 @@
           </div>
         </section>
 
+        <div style="margin-top:12px;">
+          <button id="continueTo2D" class="btn-primary">Pokračovat → 2D</button>
+        </div>
+
         <!-- VIEW: 2D -->
         <section class="view card" id="view-plan2d" hidden>
           <div class="view-header">
@@ -274,25 +282,62 @@
               </div>
             </div>
 
-            <!-- CANVAS -->
-            <div style="display:grid; grid-template-columns: 1fr 280px; gap:12px; margin-top:12px;">
-              <div class="plan2d-canvas-frame">
-                <svg id="plan2dSvg" style="background:#fafafa; border:1px solid var(--stroke); cursor:move; touch-action:none;"></svg>
+            <!-- CANVAS & SIDEBAR (responsive) -->
+            <div class="plan2d-container">
+              <!-- CANVAS -->
+              <div class="plan2d-main">
+                <div class="plan2d-canvas-frame">
+                  <svg id="plan2dSvg" style="background:#fafafa; border:1px solid var(--stroke); cursor:move; touch-action:none;"></svg>
+                </div>
+
+                <!-- DETAIL PANEL -->
+                <div id="plan2dPanel" class="plan2d-detail-panel card-inner">
+                  <div id="plan2dPanelContent">
+                    <p class="muted small">Klikni na místnost pro editaci.</p>
+                  </div>
+                </div>
               </div>
 
-              <!-- DETAIL PANEL -->
-              <div id="plan2dPanel" class="plan2d-detail-panel card-inner">
-                <div id="plan2dPanelContent">
-                  <p class="muted small">Klikni na místnost pro editaci.</p>
+              <!-- ROOM REGISTRY (mobile sidebar) -->
+              <div class="plan2d-registry">
+                <div class="plan2d-registry-header">
+                  <h3 class="h3">Místnosti</h3>
+                  <button id="plan2dRegistryClose" class="btn-mini" type="button" title="Zavřít seznam">✕</button>
+                </div>
+                <div id="plan2dRoomsList" class="plan2d-rooms-list">
+                  <!-- dynamically rendered -->
                 </div>
               </div>
             </div>
 
+            <!-- MOBILE: toggle registry button -->
+            <button id="plan2dShowRegistry" class="plan2d-show-registry" type="button" hidden>
+              <span>📋</span> Místnosti
+            </button>
+
             <p class="hint" style="margin-top:12px; font-size:0.85rem;">
-              <b>Ovládání:</b> Táhni místnosti myší · <b>Ctrl + Scroll</b> = zoom · <b>Space + táhnutí</b> = pan · Klik na dveře=přiřadit odkaz
+              <b>Ovládání (desktop):</b> Klik = vybrat pokoji · Poklikat &amp; táhnout = posunout · <b>Ctrl + Scroll</b> = zoom · <b>Space + táh.</b> = pan ·
+              
+              <b style="display:block; margin-top:6px;">Ovládání (mobil):</b> Tap = vybrat pokoji · Long-press &amp; táh = posunout · Pinch = zoom · 2-finger = pan ·
+              
+              <b style="display:block; margin-top:6px;">Dveře:</b> Kliknout na marker = vytvořit odkaz
             </p>
           </div>
         </section>
+
+        <!-- OPENINGS / ROOM DETAILS MODAL -->
+        <div id="openingsModal" class="modal" hidden>
+          <div class="modal-backdrop"></div>
+          <div class="modal-content card">
+            <div class="modal-header">
+              <h3 id="openingsModalTitle">Detaily místnosti</h3>
+              <button id="openingsModalClose" class="btn-mini" type="button">✕</button>
+            </div>
+            <div id="openingsModalBody" class="modal-body">
+              <!-- dynamic content: openings + height override -->
+            </div>
+          </div>
+        </div>
 
         <!-- VIEW: 3D -->
         <section class="view card" id="view-view3d" hidden>

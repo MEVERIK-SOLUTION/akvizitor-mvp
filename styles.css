@@ -342,6 +342,7 @@ input:focus, select:focus {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 400px;
 }
 .plan2d-canvas-frame svg {
   display: block;
@@ -349,11 +350,175 @@ input:focus, select:focus {
   height: auto;
   min-height: 100%;
 }
+
+/* === RESPONSIVE 2D LAYOUT === */
+.plan2d-container {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 12px;
+  margin-top: 12px;
+  position: relative;
+}
+
+.plan2d-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .plan2d-detail-panel {
   max-height: 600px;
   overflow-y: auto;
   border: 1px solid var(--stroke);
   padding: 12px;
+  display: none; /* Hidden until room selected */
+}
+
+.plan2d-detail-panel.visible {
+  display: block;
+}
+
+/* ROOM REGISTRY */
+.plan2d-registry {
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: #fafafa;
+  padding: 12px;
+  overflow-y: auto;
+  max-height: 600px;
+  display: none;
+}
+
+.plan2d-registry.visible {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plan2d-registry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.plan2d-registry-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.plan2d-registry-header button {
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plan2d-rooms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.plan2d-room-item {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--stroke);
+  background: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
+}
+
+.plan2d-room-item:hover {
+  background: rgba(37, 99, 235, 0.05);
+  border-color: var(--primary);
+}
+
+.plan2d-room-item.selected {
+  background: rgba(37, 99, 235, 0.15);
+  border-color: var(--primary);
+  font-weight: 650;
+  outline: 2px solid #f59e0b;
+  outline-offset: -1px;
+}
+
+.plan2d-show-registry {
+  display: none;
+  margin-top: 8px;
+  width: 100%;
+}
+
+/* === MOBILE RESPONSIVE === */
+@media (max-width: 768px) {
+  .plan2d-container {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .plan2d-canvas-frame {
+    height: 60vh;
+    max-height: calc(100vh - 300px);
+  }
+
+  .plan2d-detail-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    border-radius: 12px 12px 0 0;
+    border-top: 2px solid var(--primary);
+    z-index: 10;
+    background: white;
+    display: none;
+  }
+
+  .plan2d-detail-panel.visible {
+    display: block;
+  }
+
+  .plan2d-registry {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    max-height: 50vh;
+    border-radius: 12px 12px 0 0;
+    background: white;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    z-index: 20;
+    display: none;
+  }
+
+  .plan2d-registry.visible {
+    display: flex;
+  }
+
+  .plan2d-show-registry {
+    display: block;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: auto;
+    padding: 12px 16px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 650;
+    z-index: 15;
+    cursor: pointer;
+  }
+
+  .plan2d-show-registry.hidden {
+    display: none;
+  }
 }
 .plan2d-room-box {
   fill: rgba(37, 99, 235, 0.08);
@@ -409,3 +574,12 @@ input:focus, select:focus {
   color: #9ca3af;
   font-size: 0.85rem;
 }
+
+/* Modal for openings */
+.modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 50; }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.35); }
+.modal-content { position: relative; width: 92%; max-width: 720px; max-height: 80vh; overflow-y: auto; padding: 12px; }
+.modal-header { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.modal-body { margin-top:12px; }
+.openings-list { display:flex; flex-direction:column; gap:8px; }
+.openings-item { border:1px solid var(--stroke); padding:8px; border-radius:8px; background:white; }
