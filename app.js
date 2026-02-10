@@ -416,7 +416,15 @@
     if (!door || !roomPosM) return null;
     const { x, y } = roomPosM;
     const { length, width } = room;
-    const { wall, offsetM, widthM } = door;
+    let { wall, offsetM, widthM } = door;
+    // accept alternate wall codes A|B|C|D (map to N,E,S,W)
+    if (typeof wall === 'string') {
+      const w = wall.toUpperCase();
+      if (w === 'A') wall = 'N';
+      if (w === 'B') wall = 'E';
+      if (w === 'C') wall = 'S';
+      if (w === 'D') wall = 'W';
+    }
 
     let x1, y1, x2, y2;
     if (wall === "N") {
@@ -657,328 +665,10 @@
     }
   }
 
-  function renderPlan2D() {
-    const p = getCurrentProject();
-    const floor = getCurrentFloor(p);
+  // === 2D EDITOR (moved to plan2d.js module) ===
+  // Old render/bind functions removed. See plan2d.js for new implementation.
 
-    if (noRoomsNotice2D) noRoomsNotice2D.hidden = !!p;
-    if (plan2dContent) plan2dContent.hidden = !p;
-    if (!p || !floor) return;
 
-    const rooms = floor.rooms || [];
-    if (!rooms.length) {
-      if (noRoomsNotice2D) noRoomsNotice2D.hidden = false;
-      if (plan2dContent) plan2dContent.hidden = true;
-      return;
-    }
-
-    ensureFloorPlan2d(floor);
-    rooms.forEach(r => { ensureRoomDoors(r); ensureRoomOpenings(r); });
-
-    const pd = floor.plan2d;
-    const { scale, zoom, panX, panY } = pd;
-
-    // Clear SVG
-    if (plan2dSvg) {
-      plan2dSvg.innerHTML = "";
-      plan2dSvg.setAttribute("viewBox", "0 0 1200 800");
-      plan2dSvg.setAttribute("width", "100%");
-      plan2dSvg.setAttribute("height", "100%");
-    }
-
-    // Draw grid/background (optional, can skip)
-    // Draw rooms
-    const roomElements = {};
-    rooms.forEach((room) => {
-      const pos = pd.roomPos[room.id];
-      if (!pos) return;
-
-      const px0 = panX + pos.x * scale * zoom;
-      const py0 = panY + pos.y * scale * zoom;
-      const w = room.length * scale * zoom;
-      const h = room.width * scale * zoom;
-
-      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      rect.classList.add("plan2d-room-box");
-      if (floor.plan2d.selectedRoomId === room.id) rect.classList.add("selected"); // Visual highlight (CSS class)
-      rect.setAttribute("x", px0);
-      rect.setAttribute("y", py0);
-      rect.setAttribute("width", w);
-      rect.setAttribute("height", h);
-      rect.setAttribute("rx", 4);
-      rect.setAttribute("data-room-id", room.id);
-      rect.style.cursor = "grab";
-      rect.setAttribute("pointer-events", "all");
-      plan2dSvg.appendChild(rect);
-
-      // Add label
-      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      text.classList.add("plan2d-room-text");
-      text.setAttribute("x", px0 + w / 2);
-      text.setAttribute("y", py0 + h / 2);
-      text.setAttribute("text-anchor", "middle");
-      text.setAttribute("dominant-baseline", "middle");
-      text.textContent = `${room.name} (${room.area} m²)`;
-      plan2dSvg.appendChild(text);
-
-      roomElements[room.id] = rect;
-
-      // Draw openings (doors + windows)
-      const openings = room.openings || { doors: [], windows: [] };
-      (openings.doors || []).forEach((door) => {
-        const doorPos = getDoorWorldPos(room, door, pos);
-        if (!doorPos) return;
-
-        const dpx0 = panX + doorPos.x1 * scale * zoom;
-        const dpy0 = panY + doorPos.y1 * scale * zoom;
-        const dpx1 = panX + doorPos.x2 * scale * zoom;
-        const dpy1 = panY + doorPos.y2 * scale * zoom;
-
-        const doorLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        doorLine.classList.add("plan2d-door");
-        doorLine.setAttribute("x1", dpx0);
-        doorLine.setAttribute("y1", dpy0);
-        doorLine.setAttribute("x2", dpx1);
-        doorLine.setAttribute("y2", dpy1);
-        doorLine.setAttribute("data-room-id", room.id);
-        doorLine.setAttribute("data-door-id", door.id);
-        doorLine.setAttribute("stroke-width", 4);
-        plan2dSvg.appendChild(doorLine);
-      });
-
-      (openings.windows || []).forEach((win) => {
-        const wpos = getDoorWorldPos(room, win, pos);
-        if (!wpos) return;
-        const wpx = panX + ((wpos.x1 + wpos.x2) / 2) * scale * zoom;
-        const wpy = panY + ((wpos.y1 + wpos.y2) / 2) * scale * zoom;
-        const rectMarker = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        rectMarker.classList.add("plan2d-door");
-        rectMarker.setAttribute("x", wpx - 6);
-        rectMarker.setAttribute("y", wpy - 6);
-        rectMarker.setAttribute("width", 12);
-        rectMarker.setAttribute("height", 12);
-        rectMarker.setAttribute("data-room-id", room.id);
-        rectMarker.setAttribute("data-window-id", win.id);
-        plan2dSvg.appendChild(rectMarker);
-      });
-    });
-
-    // Draw links
-    pd.links.forEach((link) => {
-      const roomA = rooms.find(r => r.id === link.aRoomId);
-      const roomB = rooms.find(r => r.id === link.bRoomId);
-      const doorA = roomA?.doors?.find(d => d.id === link.aDoorId);
-      const doorB = roomB?.doors?.find(d => d.id === link.bDoorId);
-
-      if (!roomA || !roomB || !doorA || !doorB) return;
-
-      const posA = pd.roomPos[roomA.id];
-      const posB = pd.roomPos[roomB.id];
-      if (!posA || !posB) return;
-
-      const dawPos = getDoorWorldPos(roomA, doorA, posA);
-      const dbwPos = getDoorWorldPos(roomB, doorB, posB);
-      if (!dawPos || !dbwPos) return;
-
-      const midAx = (dawPos.x1 + dawPos.x2) / 2;
-      const midAy = (dawPos.y1 + dawPos.y2) / 2;
-      const midBx = (dbwPos.x1 + dbwPos.x2) / 2;
-      const midBy = (dbwPos.y1 + dbwPos.y2) / 2;
-
-      const linkLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      linkLine.classList.add("plan2d-link");
-      linkLine.setAttribute("x1", panX + midAx * scale * zoom);
-      linkLine.setAttribute("y1", panY + midAy * scale * zoom);
-      linkLine.setAttribute("x2", panX + midBx * scale * zoom);
-      linkLine.setAttribute("y2", panY + midBy * scale * zoom);
-      plan2dSvg.appendChild(linkLine);
-    });
-
-    // Render detail panel
-    if (plan2dPanelContent) {
-      const selected = rooms.find(r => r.id === floor.plan2d.selectedRoomId);
-      if (!selected) {
-        plan2dPanelContent.innerHTML = `<p class="muted small">Klikni na místnost pro editaci.</p>`;
-        if (plan2dPanel) plan2dPanel.classList.remove("visible");
-      } else {
-        if (plan2dPanel) plan2dPanel.classList.add("visible"); // Show detail panel on mobile
-        ensureRoomDoors(selected);
-        const selectedPos = pd.roomPos[selected.id];
-        const doorsHtml = (selected.doors || []).map((door, idx) => {
-          return `
-          <div style="margin: 10px 0; padding: 8px; border: 1px solid var(--stroke); border-radius: 8px;">
-            <div style="font-weight: 650; margin-bottom: 6px;">Dveře ${idx + 1}</div>
-            <div class="form-row" style="gap: 6px; margin-bottom: 6px;">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="margin-bottom: 3px;">Stěna</label>
-                <select data-door-wall="${door.id}" style="font-size: 0.85rem;">
-                  <option value="N" ${door.wall === "N" ? "selected" : ""}>Sever</option>
-                  <option value="E" ${door.wall === "E" ? "selected" : ""}>Východ</option>
-                  <option value="S" ${door.wall === "S" ? "selected" : ""}>Jih</option>
-                  <option value="W" ${door.wall === "W" ? "selected" : ""}>Západ</option>
-                </select>
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="margin-bottom: 3px;">Posun (m)</label>
-                <input type="number" data-door-offset="${door.id}" value="${door.offsetM}" step="0.01" min="0" style="font-size: 0.85rem;">
-              </div>
-              <div class="form-group" style="margin-bottom: 0; flex-grow: 0;">
-                <label style="margin-bottom: 3px;">Šířka (m)</label>
-                <input type="number" data-door-width="${door.id}" value="${door.widthM || 0.9}" step="0.01" min="0.1" style="font-size: 0.85rem; width: 60px;">
-              </div>
-            </div>
-            <button class="btn-mini danger" data-door-del="${door.id}" style="width: 100%; font-size: 0.85rem;">Smazat dveře</button>
-          </div>`;
-        }).join("");
-
-        const linksHtml = pd.links.filter(l => l.aRoomId === selected.id || l.bRoomId === selected.id).map((link, idx) => {
-          const otherRoomId = link.aRoomId === selected.id ? link.bRoomId : link.aRoomId;
-          const otherRoom = rooms.find(r => r.id === otherRoomId);
-          return `
-          <div style="margin: 8px 0; padding: 8px; background: rgba(37,99,235,0.08); border-radius: 8px; font-size: 0.85rem;">
-            <div>Připojeno na: <b>${escapeHtml(otherRoom?.name || "?")}</b></div>
-            <button class="btn-mini danger" data-link-del="${link.aRoomId}|${link.aDoorId}|${link.bRoomId}|${link.bDoorId}" style="width: 100%; margin-top: 4px; font-size: 0.85rem;">Odpojit</button>
-          </div>`;
-        }).join("");
-
-        plan2dPanelContent.innerHTML = `
-          <h3 class="h3" style="margin-top: 0;">Místnost: ${escapeHtml(selected.name)}</h3>
-          <div class="small muted"><b>${selected.length} × ${selected.width} m</b> · ${selected.area} m²</div>
-          ${selected.height ? `<div class="small muted">Výška: ${selected.height} m</div>` : ""}
-
-          <div style="margin-top: 12px;">
-            <h4 style="margin: 0 0 8px; font-size: 0.95rem;">Dveře (${selected.doors?.length || 0})</h4>
-            ${doorsHtml}
-            <button class="btn-mini primary" data-add-door="${selected.id}" style="width: 100%; margin-top: 8px; font-size: 0.85rem;">+ Přidat dveře</button>
-          </div>
-
-          ${linksHtml ? `<div style="margin-top: 12px;"><h4 style="margin: 0 0 8px; font-size: 0.95rem;">Připojení (${linksHtml.split('data-link-del').length - 1})</h4>${linksHtml}</div>` : ""}
-        `;
-
-        // Bind door edit listeners
-        plan2dPanelContent.querySelectorAll("[data-door-wall]").forEach((sel) => {
-          sel.addEventListener("change", () => {
-            const doorId = sel.getAttribute("data-door-wall");
-            const door = selected.doors.find(d => d.id === doorId);
-            if (door) door.wall = sel.value;
-            const pp = getCurrentProject();
-            if (pp) upsertProject(pp);
-            renderPlan2D();
-          });
-        });
-
-        plan2dPanelContent.querySelectorAll("[data-door-offset]").forEach((inp) => {
-          inp.addEventListener("change", () => {
-            const doorId = inp.getAttribute("data-door-offset");
-            const door = selected.doors.find(d => d.id === doorId);
-            if (door) door.offsetM = Number(inp.value) || 0;
-            const pp = getCurrentProject();
-            if (pp) upsertProject(pp);
-            renderPlan2D();
-          });
-        });
-
-        plan2dPanelContent.querySelectorAll("[data-door-width]").forEach((inp) => {
-          inp.addEventListener("change", () => {
-            const doorId = inp.getAttribute("data-door-width");
-            const door = selected.doors.find(d => d.id === doorId);
-            if (door) door.widthM = Number(inp.value) || 0.9;
-            const pp = getCurrentProject();
-            if (pp) upsertProject(pp);
-            renderPlan2D();
-          });
-        });
-
-        plan2dPanelContent.querySelectorAll("[data-door-del]").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const doorId = btn.getAttribute("data-door-del");
-            selected.doors = (selected.doors || []).filter(d => d.id !== doorId);
-            floor.plan2d.links = floor.plan2d.links.filter(l => l.aDoorId !== doorId && l.bDoorId !== doorId);
-            const pp = getCurrentProject();
-            if (pp) upsertProject(pp);
-            renderPlan2D();
-          });
-        });
-
-        plan2dPanelContent.querySelectorAll("[data-add-door]").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const newDoor = {
-              id: safeId(),
-              wall: "N",
-              offsetM: 0.5,
-              widthM: 0.9,
-            };
-            selected.doors.push(newDoor);
-            const pp = getCurrentProject();
-            if (pp) upsertProject(pp);
-            renderPlan2D();
-          });
-        });
-
-        plan2dPanelContent.querySelectorAll("[data-link-del]").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const [aRoomId, aDoorId, bRoomId, bDoorId] = btn.getAttribute("data-link-del").split("|");
-            floor.plan2d.links = floor.plan2d.links.filter(l => !(l.aRoomId === aRoomId && l.aDoorId === aDoorId && l.bRoomId === bRoomId && l.bDoorId === bDoorId));
-            const pp = getCurrentProject();
-            if (pp) upsertProject(pp);
-            renderPlan2D();
-          });
-        });
-      }
-    }
-  }
-
-  // === ROOM REGISTRY (mobile sidebar list) ===
-  function renderPlan2DRegistry() {
-    const p = getCurrentProject();
-    const floor = getCurrentFloor(p);
-    if (!p || !floor || !plan2dRoomsList) return;
-
-    const rooms = floor.rooms || [];
-    const selectedId = floor.plan2d?.selectedRoomId;
-
-    plan2dRoomsList.innerHTML = rooms.map((room) => {
-      const isSelected = room.id === selectedId ? "selected" : "";
-      const area = (room.length && room.width) ? `${(room.length * room.width).toFixed(1)}m²` : "–";
-      return `<div class="plan2d-room-item ${isSelected}" data-registry-room-id="${room.id}">
-        <div style="font-weight:650;">${escapeHtml(room.name || "Místnost")}</div>
-        <div style="font-size:0.85rem; color:#666; margin-top:2px;">${area}</div>
-      </div>`;
-    }).join("");
-
-    // Add click handlers to registry items
-    plan2dRoomsList.querySelectorAll(".plan2d-room-item").forEach((item) => {
-      item.addEventListener("click", () => {
-        const roomId = item.getAttribute("data-registry-room-id");
-        // Toggle selection
-        floor.plan2d.selectedRoomId = floor.plan2d.selectedRoomId === roomId ? null : roomId;
-        renderPlan2D();
-        renderPlan2DRegistry();
-        // Center on selected room
-        if (floor.plan2d.selectedRoomId === roomId) {
-          const room = rooms.find(r => r.id === roomId);
-          if (room) centerCanvasOnRoom(room, floor);
-        }
-      });
-    });
-  }
-
-  // === CENTER CANVAS ON ROOM ===
-  function centerCanvasOnRoom(room, floor) {
-    if (!room || !floor?.plan2d) return;
-    const pos = floor.plan2d.roomPos[room.id];
-    if (!pos) return;
-    
-    // Center the canvas on the room's center
-    const roomCenterX = pos.x + (room.length / 2);
-    const roomCenterY = pos.y + (room.width / 2);
-    const canvasWidth = plan2dSvg.clientWidth / (floor.plan2d.scale * floor.plan2d.zoom);
-    const canvasHeight = plan2dSvg.clientHeight / (floor.plan2d.scale * floor.plan2d.zoom);
-    
-    floor.plan2d.panX = -(roomCenterX * floor.plan2d.scale * floor.plan2d.zoom - plan2dSvg.clientWidth / 2);
-    floor.plan2d.panY = -(roomCenterY * floor.plan2d.scale * floor.plan2d.zoom - plan2dSvg.clientHeight / 2);
-    renderPlan2D();
-  }
 
   // === OPENINGS / ROOM DETAILS MODAL ===
   const openingsModal = $("#openingsModal");
@@ -986,6 +676,7 @@
   const openingsModalTitle = $("#openingsModalTitle");
   const openingsModalClose = $("#openingsModalClose");
   let openingsEditingRoomId = null;
+  let openingsModalBound = false;
 
   function openOpeningsModal(roomId) {
     const p = getCurrentProject();
@@ -995,14 +686,30 @@
     if (!room) return;
     ensureRoomOpenings(room);
     openingsEditingRoomId = roomId;
-    console.log('openings modal for', roomId);
     if (openingsModalTitle) openingsModalTitle.textContent = `Detaily: ${room.name}`;
     renderOpeningsModal(room);
-    if (openingsModal) openingsModal.hidden = false;
+    if (openingsModal) {
+      openingsModal.hidden = false;
+      try { document.body.style.overflow = 'hidden'; } catch (e) {}
+    }
+    // Bind modal controls only once
+    if (!openingsModalBound) {
+      const backdrop = openingsModal?.querySelector('.modal-backdrop');
+      if (backdrop) {
+        backdrop.addEventListener('click', (e) => { e.stopPropagation(); closeOpeningsModal(); });
+      }
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape' && !openingsModal.hidden) closeOpeningsModal();
+      });
+      openingsModalBound = true;
+    }
   }
 
   function closeOpeningsModal() {
-    if (openingsModal) openingsModal.hidden = true;
+    if (openingsModal) {
+      openingsModal.hidden = true;
+      try { document.body.style.overflow = ''; } catch (e) {}
+    }
     openingsEditingRoomId = null;
   }
 
@@ -1090,7 +797,7 @@
       }
       closeOpeningsModal();
       renderCollectView();
-      renderPlan2D();
+      if (state.activeView === 'plan2d') init2D();
     });
 
     if (closeOpeningsBtn) closeOpeningsBtn.addEventListener("click", closeOpeningsModal);
@@ -1114,369 +821,47 @@
 
   // === 2D EDITOR INITIALIZATION ===
   function init2D() {
-    // Reset binding flag so listeners attach on this view activation
-    state.plan2dBound = false;
-    // Render SVG canvas
-    renderPlan2D();
-    // Render room registry (mobile list)
-    renderPlan2DRegistry();
-    // Bind interactive handlers (drag, zoom, pan, doors)
-    bindPlan2dEvents();
-  }
-
-  function bindPlan2dEvents() {
-    // Prevent duplicate binding
-    if (state.plan2dBound) return;
-    state.plan2dBound = true;
-
     const p = getCurrentProject();
     const floor = getCurrentFloor(p);
-    if (!p || !floor || !plan2dSvg) return;
+    
+    if (!p || !floor) {
+      if (plan2dContent) plan2dContent.hidden = true;
+      if (noRoomsNotice2D) noRoomsNotice2D.hidden = false;
+      return;
+    }
 
     const rooms = floor.rooms || [];
-    const pd = floor.plan2d;
-    const isMobile = /iPhone|iPad|Android|webOS|IEMobile/i.test(navigator.userAgent);
+    if (!rooms.length) {
+      if (plan2dContent) plan2dContent.hidden = true;
+      if (noRoomsNotice2D) noRoomsNotice2D.hidden = false;
+      return;
+    }
 
-    // === DRAG STATE (global) ===
-    let dragRoomId = null;
-    let dragPointerId = null;
-    let dragStartX = 0, dragStartY = 0;
-    let dragStartRoomX = 0, dragStartRoomY = 0;
-    let dragScale = pd.scale;
-    let dragZoom = pd.zoom;
-    let isLongPress = false;
+    if (plan2dContent) plan2dContent.hidden = false;
+    if (noRoomsNotice2D) noRoomsNotice2D.hidden = true;
 
-    // === ROOM CLICK/TAP vs DRAG separation (delegated on SVG) ===
-    const touchTimers = {};
-    plan2dSvg.addEventListener('pointerdown', (e) => {
-      const targetRect = e.target.closest && e.target.closest('.plan2d-room-box');
-      if (!targetRect) return;
-      if (state.plan2dPanActive) return;
-      const roomId = targetRect.getAttribute('data-room-id');
-      if (!roomId) return;
+    // Ensure floor data structure
+    ensureFloorPlan2d(floor);
+    rooms.forEach(r => { ensureRoomDoors(r); ensureRoomOpenings(r); });
 
-      const isMouseEvent = e.pointerType === 'mouse';
-      const isSelected = pd.selectedRoomId === roomId;
-
-      if (isMouseEvent) {
-        // Desktop: click selects; click+drag moves only when already selected
-        if (!isSelected) {
-          e.preventDefault();
-          pd.selectedRoomId = pd.selectedRoomId === roomId ? null : roomId;
-          renderPlan2D();
-          renderPlan2DRegistry();
-          return;
-        }
-        // already selected -> start drag immediately
-        e.preventDefault();
-        isLongPress = true;
-        try { targetRect.setPointerCapture(e.pointerId); } catch (err) {}
-        dragRoomId = roomId;
-        dragPointerId = e.pointerId;
-        console.log('plan2d: start drag', roomId);
-        dragStartX = e.clientX;
-        dragStartY = e.clientY;
-        dragScale = pd.scale;
-        dragZoom = pd.zoom;
-        const pos = pd.roomPos[roomId];
-        if (pos) { dragStartRoomX = pos.x; dragStartRoomY = pos.y; }
-        targetRect.classList.add('dragging');
-        return;
-      }
-
-      // Mobile: tap selects; long-press (300ms) starts drag for selected
-      e.preventDefault();
-      pd.selectedRoomId = pd.selectedRoomId === roomId ? null : roomId;
-      renderPlan2D();
-      renderPlan2DRegistry();
-      if (pd.selectedRoomId !== roomId) return;
-
-      // set long-press timer
-      touchTimers[e.pointerId] = setTimeout(() => {
-        isLongPress = true;
-        try { targetRect.setPointerCapture(e.pointerId); } catch (err) {}
-        dragRoomId = roomId;
-        dragPointerId = e.pointerId;
-        dragStartX = e.clientX;
-        dragStartY = e.clientY;
-        dragScale = pd.scale;
-        dragZoom = pd.zoom;
-        const pos = pd.roomPos[roomId];
-        if (pos) { dragStartRoomX = pos.x; dragStartRoomY = pos.y; }
-        targetRect.classList.add('dragging');
-      }, 300);
-    });
-
-    plan2dSvg.addEventListener('pointerup', (e) => {
-      if (touchTimers[e.pointerId]) { clearTimeout(touchTimers[e.pointerId]); delete touchTimers[e.pointerId]; }
-    });
-
-    // === POINTERMOVE globally (drag update) ===
-    document.addEventListener("pointermove", (e) => {
-      if (!dragRoomId || dragPointerId !== e.pointerId || !isLongPress) return;
-      
-      const room = rooms.find(r => r.id === dragRoomId);
-      if (!room) return;
-
-      // Convert pixel delta to meter delta
-      const dx = (e.clientX - dragStartX) / (dragScale * dragZoom);
-      const dy = (e.clientY - dragStartY) / (dragScale * dragZoom);
-      let newX = dragStartRoomX + dx;
-      let newY = dragStartRoomY + dy;
-
-      // Apply snap if toggle is on
-      if (plan2dSnapToggle?.checked) {
-        const snapped = findNearbyEdges(room, { x: newX, y: newY }, floor);
-        if (snapped.snapX !== null) newX = snapped.snapX;
-        if (snapped.snapY !== null) newY = snapped.snapY;
-      }
-
-      // Update position in data model ONLY (no render)
-      pd.roomPos[dragRoomId] = { x: newX, y: newY };
-    });
-
-    // === POINTERUP globally (finish drag + render) ===
-    document.addEventListener("pointerup", (e) => {
-      if (!dragRoomId || dragPointerId !== e.pointerId) return;
-      
-      if (isLongPress) {
-        // Save and re-render only on drag end
-        const pp = getCurrentProject();
-        if (pp) upsertProject(pp);
-        renderPlan2D();
-      }
-      
-      // Remove visual feedback
-      plan2dSvg.querySelectorAll(".plan2d-room-box.dragging").forEach(r => {
-        r.classList.remove("dragging");
-      });
-      
-      dragRoomId = null;
-      dragPointerId = null;
-      isLongPress = false;
-    });
-
-    // === TOUCH GESTURES (mobile) ===
-    let lastTouchDistance = 0;
-
-    plan2dSvg?.addEventListener("touchstart", (e) => {
-      if (e.touches.length === 2) {
-        // Two-finger: prepare for pinch or pan
-        const t1 = e.touches[0];
-        const t2 = e.touches[1];
-        lastTouchDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-      }
-      state.plan2dTouchPoints = Array.from(e.touches).map(t => ({ x: t.clientX, y: t.clientY }));
-    }, { passive: true });
-
-    plan2dSvg?.addEventListener("touchmove", (e) => {
-      if (e.touches.length === 2) {
-        // Two-finger: pinch zoom OR two-finger pan
-        const t1 = e.touches[0];
-        const t2 = e.touches[1];
-        const currentDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-        const distanceChange = currentDistance - lastTouchDistance;
-        
-        if (Math.abs(distanceChange) > 5) {
-          // PINCH ZOOM detected
-          e.preventDefault();
-          const zoomDelta = distanceChange > 0 ? 0.05 : -0.05;
-          const newZoom = Math.max(0.25, Math.min(3, pd.zoom + zoomDelta));
-          pd.zoom = newZoom;
-          if (plan2dZoomSlider) plan2dZoomSlider.value = newZoom;
-          if (plan2dZoomLabel) plan2dZoomLabel.textContent = Math.round(newZoom * 100) + "%";
-          lastTouchDistance = currentDistance;
-          renderPlan2D();
-        } else {
-          // TWO-FINGER PAN (no drag in progress)
-          if (!dragRoomId) {
-            e.preventDefault();
-            const prevPoints = state.plan2dTouchPoints;
-            if (prevPoints.length === 2) {
-              const dx = (t1.clientX + t2.clientX) / 2 - (prevPoints[0].x + prevPoints[1].x) / 2;
-              const dy = (t1.clientY + t2.clientY) / 2 - (prevPoints[0].y + prevPoints[1].y) / 2;
-              pd.panX += dx;
-              pd.panY += dy;
-              renderPlan2D();
-            }
-          }
-        }
-      }
-    }, { passive: false });
-
-    plan2dSvg?.addEventListener("touchend", () => {
-      lastTouchDistance = 0;
-      state.plan2dTouchPoints = [];
-    }, { passive: true });
-
-    // === DOOR CLICKING (linking) ===
-    plan2dSvg.querySelectorAll(".plan2d-door").forEach((line) => {
-      line.addEventListener("click", () => {
-        const roomId = line.getAttribute("data-room-id");
-        const doorId = line.getAttribute("data-door-id");
-        const doorRef = { roomId, doorId };
-
-        if (!state.plan2dLinkingMode) {
-          state.plan2dLinkingMode = true;
-          state.plan2dLinkingFrom = doorRef;
-          line.classList.add("selectable-link");
-        } else if (state.plan2dLinkingFrom.roomId === roomId && state.plan2dLinkingFrom.doorId === doorId) {
-          // deselect
-          state.plan2dLinkingMode = false;
-          state.plan2dLinkingFrom = null;
-          renderPlan2D();
-        } else {
-          // create link
-          createLinkAndSnap(state.plan2dLinkingFrom, doorRef);
-          state.plan2dLinkingMode = false;
-          state.plan2dLinkingFrom = null;
-          upsertProject(p);
-          renderPlan2D();
+    // Create editor on first use
+    if (!state.plan2dEditor) {
+      state.plan2dEditor = createPlan2DEditor({
+        svgEl: plan2dSvg,
+        registryEl: plan2dRoomsList,
+        zoomSliderEl: plan2dZoomSlider,
+        snapToggleEl: plan2dSnapToggle,
+        onChange: (updatedFloor) => {
+          const pp = getCurrentProject();
+          if (pp) upsertProject(pp);
         }
       });
-    });
-
-    // === ZOOM slider ===
-    if (plan2dZoomSlider) {
-      plan2dZoomSlider.addEventListener("input", (e) => {
-        const newZoom = Number(e.target.value);
-        pd.zoom = newZoom;
-        if (plan2dZoomLabel) plan2dZoomLabel.textContent = Math.round(newZoom * 100) + "%";
-        renderPlan2D();
-      });
+      state.plan2dEditor.attachEvents();
     }
 
-    // === ZOOM reset ===
-    if (plan2dZoomReset) {
-      plan2dZoomReset.addEventListener("click", () => {
-        pd.zoom = 1;
-        pd.panX = 0;
-        pd.panY = 0;
-        if (plan2dZoomSlider) plan2dZoomSlider.value = 1;
-        if (plan2dZoomLabel) plan2dZoomLabel.textContent = "100%";
-        renderPlan2D();
-      });
-    }
-
-    // === PAN with space key (desktop) ===
-    let spacePressed = false;
-    let panStartX, panStartY;
-
-    document.addEventListener("keydown", (e) => {
-      if (e.code === "Space" && state.activeView === "plan2d") {
-        e.preventDefault();
-        spacePressed = true;
-        state.plan2dPanActive = true;
-      }
-    });
-
-    document.addEventListener("keyup", (e) => {
-      if (e.code === "Space") {
-        spacePressed = false;
-        state.plan2dPanActive = false;
-      }
-    });
-
-    plan2dSvg?.addEventListener("mousedown", (e) => {
-      if (!spacePressed || state.activeView !== "plan2d") return;
-      panStartX = e.clientX;
-      panStartY = e.clientY;
-    });
-
-    plan2dSvg?.addEventListener("mousemove", (e) => {
-      if (!spacePressed || state.activeView !== "plan2d") return;
-      const dx = e.clientX - panStartX;
-      const dy = e.clientY - panStartY;
-      pd.panX += dx;
-      pd.panY += dy;
-      panStartX = e.clientX;
-      panStartY = e.clientY;
-      renderPlan2D();
-    });
-
-    // === ZOOM with Ctrl+Scroll (desktop) ===
-    plan2dSvg?.addEventListener("wheel", (e) => {
-      if (!e.ctrlKey && !e.metaKey) return;
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      const newZoom = Math.max(0.25, Math.min(3, pd.zoom + delta));
-      pd.zoom = newZoom;
-      if (plan2dZoomSlider) plan2dZoomSlider.value = newZoom;
-      if (plan2dZoomLabel) plan2dZoomLabel.textContent = Math.round(newZoom * 100) + "%";
-      renderPlan2D();
-    });
-
-    // === REGISTRY close button (mobile) ===
-    if (plan2dRegistryClose) {
-      plan2dRegistryClose.addEventListener("click", () => {
-        if (plan2dRegistry) plan2dRegistry.classList.remove("visible");
-        if (plan2dShowRegistry) plan2dShowRegistry.classList.remove("hidden");
-      });
-    }
-
-    // === SHOW REGISTRY button (mobile) ===
-    if (plan2dShowRegistry) {
-      plan2dShowRegistry.addEventListener("click", () => {
-        if (plan2dRegistry) plan2dRegistry.classList.add("visible");
-        plan2dShowRegistry.classList.add("hidden");
-      });
-    }
-
-    // === EXPORT PNG ===
-    if (plan2dExportPng) {
-      plan2dExportPng.addEventListener("click", () => {
-        exportPlan2dPng();
-      });
-    }
-  }
-
-  function createLinkAndSnap(fromDoor, toDoor) {
-    const p = getCurrentProject();
-    const floor = getCurrentFloor(p);
-    if (!p || !floor) return;
-
-    const roomA = (floor.rooms || []).find(r => r.id === fromDoor.roomId);
-    const roomB = (floor.rooms || []).find(r => r.id === toDoor.roomId);
-    if (!roomA || !roomB) return;
-
-    const doorA = roomA.doors?.find(d => d.id === fromDoor.doorId);
-    const doorB = roomB.doors?.find(d => d.id === toDoor.doorId);
-    if (!doorA || !doorB) return;
-
-    // Create link
-    const link = {
-      aRoomId: fromDoor.roomId,
-      aDoorId: fromDoor.doorId,
-      bRoomId: toDoor.roomId,
-      bDoorId: toDoor.doorId,
-    };
-
-    // Check if link already exists
-    const exists = floor.plan2d.links.some(l => l.aRoomId === link.aRoomId && l.aDoorId === link.aDoorId && l.bRoomId === link.bRoomId && l.bDoorId === link.bDoorId);
-    if (exists) return;
-
-    floor.plan2d.links.push(link);
-
-    // Auto-snap: move room B so doors align
-    const posA = floor.plan2d.roomPos[roomA.id];
-    const posB = floor.plan2d.roomPos[roomB.id];
-    if (posA && posB) {
-      const doorAPos = getDoorWorldPos(roomA, doorA, posA);
-      const doorBPos = getDoorWorldPos(roomB, doorB, posB);
-      if (doorAPos && doorBPos) {
-        // move room B so door centers align
-        const midAx = (doorAPos.x1 + doorAPos.x2) / 2;
-        const midAy = (doorAPos.y1 + doorAPos.y2) / 2;
-        const midBx = (doorBPos.x1 + doorBPos.x2) / 2;
-        const midBy = (doorBPos.y1 + doorBPos.y2) / 2;
-
-        const deltaX = midAx - midBx;
-        const deltaY = midAy - midBy;
-
-        posB.x += deltaX;
-        posB.y += deltaY;
-      }
-    }
+    // Set data and render
+    state.plan2dEditor.setData({ project: p, floor: floor });
+    state.plan2dEditor.render();
   }
 
   function exportPlan2dPng() {
