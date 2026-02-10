@@ -34,6 +34,12 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
     isDragging: false
   };
 
+  // Door-linking state
+  let doorLinkingState = {
+    selectedDoor: null, // { roomId, doorId, wall, roomName }
+    links: [] // Array of { id, a: {roomId, doorId}, b: {roomId, doorId} }
+  };
+
   // Pan state (Space + drag)
   let panState = {
     active: false,
@@ -52,6 +58,10 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
   };
 
   // ========== HELPERS ==========
+
+  function safeId() {
+    return "id_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+  }
 
   function getRooms() {
     return data?.floor?.rooms || [];
@@ -134,6 +144,17 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
 
   // ========== RENDER ==========
 
+  let rafId = null;
+
+  function scheduleRender() {
+    if (rafId) return;
+    rafId = requestAnimationFrame(() => {
+      renderSVG();
+      renderRegistry();
+      rafId = null;
+    });
+  }
+
   function renderSVG() {
     if (!svgEl) return;
 
@@ -186,6 +207,26 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
         line.setAttribute('x2', x2);
         line.setAttribute('y2', y2);
         svgEl.appendChild(line);
+
+        // Door marker (clickable circle)
+        const mx = (x1 + x2) / 2;
+        const my = (y1 + y2) / 2;
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.classList.add('plan2d-door-marker');
+        if (doorLinkingState.selectedDoor?.roomId === room.id && doorLinkingState.selectedDoor?.doorId === door.id) {
+          circle.classList.add('selected-door');
+        }
+        if (door.linkedDoor) {
+          circle.classList.add('linked-door');
+        }
+        circle.setAttribute('cx', mx);
+        circle.setAttribute('cy', my);
+        circle.setAttribute('r', 6);
+        circle.setAttribute('data-room-id', room.id);
+        circle.setAttribute('data-opening-id', door.id);
+        circle.setAttribute('data-opening-type', 'door');
+        circle.style.cursor = 'pointer';
+        svgEl.appendChild(circle);
       });
 
       // Windows
@@ -201,7 +242,62 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
         line.setAttribute('x2', x2);
         line.setAttribute('y2', y2);
         svgEl.appendChild(line);
+
+        // Window marker (small circle)
+        const mx = (x1 + x2) / 2;
+        const my = (y1 + y2) / 2;
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.classList.add('plan2d-window-marker');
+        circle.setAttribute('cx', mx);
+        circle.setAttribute('cy', my);
+        circle.setAttribute('r', 4);
+        circle.setAttribute('data-room-id', room.id);
+        circle.setAttribute('data-opening-id', win.id);
+        circle.setAttribute('data-opening-type', 'window');
+        svgEl.appendChild(circle);
       });
+    });
+
+    // Render link lines
+    renderLinkLines();
+  }
+
+  function renderLinkLines() {
+    const floor = getFloor();
+    const links = floor?.plan2d?.links || [];
+    const rooms = getRooms();
+
+    links.forEach(link => {
+      const roomA = rooms.find(r => r.id === link.a.roomId);
+      const roomB = rooms.find(r => r.id === link.b.roomId);
+      if (!roomA || !roomB) return;
+
+      const doorA = (roomA.openings?.doors || []).find(d => d.id === link.a.doorId);
+      const doorB = (roomB.openings?.doors || []).find(d => d.id === link.b.doorId);
+      if (!doorA || !doorB) return;
+
+      const posA = getRoomPos(roomA.id);
+      const posB = getRoomPos(roomB.id);
+      if (!posA || !posB) return;
+
+      const centerA = getDoorCenterInMeters(roomA, doorA, posA);
+      const centerB = getDoorCenterInMeters(roomB, doorB, posB);
+      if (!centerA || !centerB) return;
+
+      const s1 = worldToScreen(centerA.x, centerA.y);
+      const s2 = worldToScreen(centerB.x, centerB.y);
+
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.classList.add('plan2d-link-line');
+      line.setAttribute('x1', s1.x);
+      line.setAttribute('y1', s1.y);
+      line.setAttribute('x2', s2.x);
+      line.setAttribute('y2', s2.y);
+      line.setAttribute('data-link-id', link.id);
+      line.style.stroke = '#28a745';
+      line.style.strokeWidth = '2';
+      line.style.pointerEvents = 'none';
+      svgEl.appendChild(line);
     });
   }
 
@@ -209,7 +305,7 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
     if (!opening.wall) return null;
 
     const wall = opening.wall.toUpperCase();
-    const offset = (opening.offset || 0);
+    const offset = Number(opening.offsetM || 0);
     
     let x1, y1, x2, y2;
     const len = room.length;
@@ -267,16 +363,198 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
 
   // ========== EVENTS ==========
 
+  function handleDoorMarkerClick(e, roomId, doorId, marker) {
+    if (!roomId || !doorId) return;
+
+    const room = getRooms().find(r => r.id === roomId);
+    if (!room) return;
+
+    const door = (room.openings?.doors || []).find(d => d.id === doorId);
+    if (!door) return;
+
+    // Alt+click = unlink
+    if (e.altKey && door.linkedDoor) {
+      unlinkDoor(room, door);
+      console.log('[plan2d] Door unlinked:', roomId, doorId);
+      onChange(getFloor());
+      renderSVG();
+      renderRegistry();
+      return;
+    }
+
+    // If no selection, select this door
+    if (!doorLinkingState.selectedDoor) {
+      doorLinkingState.selectedDoor = { roomId, doorId, wall: door.wall, roomName: room.name };
+      console.log('[plan2d] Door selected:', roomId, doorId, 'wall:', door.wall);
+      renderSVG();
+      renderRegistry();
+      return;
+    }
+
+    const selected = doorLinkingState.selectedDoor;
+
+    // If clicking the same door again, deselect
+    if (selected.roomId === roomId && selected.doorId === doorId) {
+      doorLinkingState.selectedDoor = null;
+      renderSVG();
+      renderRegistry();
+      return;
+    }
+
+    // Try to link: check if walls are opposite
+    if (!areOppositeWalls(selected.wall, door.wall)) {
+      alert('Dveře musí být na protilehlých stěnách!');
+      return;
+    }
+
+    // Get the room that was already selected
+    const selectedRoom = getRooms().find(r => r.id === selected.roomId);
+    if (!selectedRoom) return;
+    const selectedDoor = (selectedRoom.openings?.doors || []).find(d => d.id === selected.doorId);
+    if (!selectedDoor) return;
+
+    // Move selectedRoom so its door aligns with current room's door
+    // Then set bidirectional link
+    alignRoomsViaDoorsAndLink(selectedRoom, selectedDoor, room, door);
+
+    // Clear selection after linking
+    doorLinkingState.selectedDoor = null;
+    console.log('[plan2d] Doors linked:', selected.roomId, 'to', roomId);
+
+    // Save and re-render
+    onChange(getFloor());
+    renderSVG();
+    renderRegistry();
+  }
+
+  function areOppositeWalls(w1, w2) {
+    const normalize = (w) => String(w || 'N').toUpperCase();
+    w1 = normalize(w1);
+    w2 = normalize(w2);
+    return (w1 === 'N' && w2 === 'S') || (w1 === 'S' && w2 === 'N') ||
+           (w1 === 'E' && w2 === 'W') || (w1 === 'W' && w2 === 'E') ||
+           (w1 === 'A' && w2 === 'C') || (w1 === 'C' && w2 === 'A') ||
+           (w1 === 'B' && w2 === 'D') || (w1 === 'D' && w2 === 'B');
+  }
+
+  function unlinkDoor(room, door) {
+    const floor = getFloor();
+    if (!floor?.plan2d?.links) return;
+
+    // Get the other end of the link
+    const linkedOther = door.linkedDoor;
+    if (!linkedOther) return;
+
+    // Remove the link on both sides
+    floor.plan2d.links = floor.plan2d.links.filter(
+      link => !(
+        (link.a.roomId === room.id && link.a.doorId === door.id) ||
+        (link.b.roomId === room.id && link.b.doorId === door.id)
+      )
+    );
+
+    // Clear linkedDoor references
+    door.linkedDoor = null;
+
+    // Also clear on the other door
+    const otherRoom = getRooms().find(r => r.id === linkedOther.roomId);
+    if (otherRoom) {
+      const otherDoor = (otherRoom.openings?.doors || []).find(d => d.id === linkedOther.doorId);
+      if (otherDoor) {
+        otherDoor.linkedDoor = null;
+      }
+    }
+  }
+
+  function alignRoomsViaDoorsAndLink(roomA, doorA, roomB, doorB) {
+    // Compute where each door centerpoint is in world coords
+    const posA = getRoomPos(roomA.id);
+    const posB = getRoomPos(roomB.id);
+    if (!posA || !posB) return;
+
+    const centerA = getDoorCenterInMeters(roomA, doorA, posA);
+    const centerB = getDoorCenterInMeters(roomB, doorB, posB);
+    if (!centerA || !centerB) return;
+
+    // Move roomA so its door center matches roomB's door center
+    const offsetX = centerB.x - centerA.x;
+    const offsetY = centerB.y - centerA.y;
+    posA.x += offsetX;
+    posA.y += offsetY;
+    setRoomPos(roomA.id, posA.x, posA.y);
+
+    // Create bidirectional link
+    doorA.linkedDoor = { roomId: roomB.id, doorId: doorB.id };
+    doorB.linkedDoor = { roomId: roomA.id, doorId: doorA.id };
+
+    // Also store in floor.plan2d.links for persistence
+    const floor = getFloor();
+    if (!floor.plan2d) floor.plan2d = {};
+    if (!floor.plan2d.links) floor.plan2d.links = [];
+
+    // Remove any existing link for these doors
+    floor.plan2d.links = floor.plan2d.links.filter(
+      link => !(
+        (link.a.roomId === roomA.id && link.a.doorId === doorA.id) ||
+        (link.a.roomId === roomB.id && link.a.doorId === doorB.id) ||
+        (link.b.roomId === roomA.id && link.b.doorId === doorA.id) ||
+        (link.b.roomId === roomB.id && link.b.doorId === doorB.id)
+      )
+    );
+
+    // Add new link
+    floor.plan2d.links.push({
+      id: safeId(),
+      a: { roomId: roomA.id, doorId: doorA.id },
+      b: { roomId: roomB.id, doorId: doorB.id }
+    });
+  }
+
+  function getDoorCenterInMeters(room, door, roomPos) {
+    if (!door.wall) return null;
+    const wall = String(door.wall).toUpperCase();
+    const offset = Number(door.offsetM || 0);
+    const width = Number(door.widthM || 0.9);
+    const roomLen = room.length;
+    const roomWid = room.width;
+
+    let cx, cy;
+    if (wall === 'N' || wall === 'A') {
+      cx = roomPos.x + offset + width / 2;
+      cy = roomPos.y;
+    } else if (wall === 'S' || wall === 'C') {
+      cx = roomPos.x + offset + width / 2;
+      cy = roomPos.y + roomWid;
+    } else if (wall === 'E' || wall === 'B') {
+      cx = roomPos.x + roomLen;
+      cy = roomPos.y + offset + width / 2;
+    } else if (wall === 'W' || wall === 'D') {
+      cx = roomPos.x;
+      cy = roomPos.y + offset + width / 2;
+    } else {
+      return null;
+    }
+
+    return { x: cx, y: cy };
+  }
+
   function attachEvents() {
+    console.log('[plan2d] attachEvents called. svgEl:', svgEl, 'eventsAttached:', eventsAttached);
+    
     if (eventsAttached) return;
     eventsAttached = true;
 
     // SVG pointerdown: select/start drag
-    svgEl?.addEventListener('pointerdown', onSvgPointerDown);
+    if (svgEl) {
+      console.log('[plan2d] Adding pointerdown listener to svgEl');
+      svgEl.addEventListener('pointerdown', onSvgPointerDown);
+    } else {
+      console.error('[plan2d] ERROR: svgEl is null/undefined!');
+    }
 
-    // Global pointermove/pointerup for drag
-    document.addEventListener('pointermove', onGlobalPointerMove);
-    document.addEventListener('pointerup', onGlobalPointerUp);
+    // SVG pointermove/pointerup for drag (capture will route here)
+    svgEl?.addEventListener('pointermove', onGlobalPointerMove);
+    svgEl?.addEventListener('pointerup', onGlobalPointerUp);
 
     // Zoom slider
     zoomSliderEl?.addEventListener('input', onZoomSliderChange);
@@ -311,39 +589,61 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
   }
 
   function onSvgPointerDown(e) {
+    console.log('[plan2d] onSvgPointerDown fired. target:', e.target?.tagName, 'data-room-id:', e.target?.getAttribute?.('data-room-id'));
+    
     if (panState.active) return;
     if (dragState.isDragging) return;
 
-    const roomBox = e.target.closest('[data-room-id]');
-    if (!roomBox) return;
+    const target = e.target;
+    if (!target) return;
 
-    const roomId = roomBox.getAttribute('data-room-id');
-    const selectedId = getSelectedRoomId();
-
-    // Tap = select room
-    setSelectedRoomId(selectedId === roomId ? null : roomId);
-    render();
-
-    // If now selected, prepare to drag
-    if (getSelectedRoomId() === roomId) {
-      e.preventDefault();
-      dragState.roomId = roomId;
-      dragState.pointerId = e.pointerId;
-      dragState.startClientX = e.clientX;
-      dragState.startClientY = e.clientY;
-      
-      const pos = getRoomPos(roomId);
-      if (pos) {
-        dragState.startRoomX = pos.x;
-        dragState.startRoomY = pos.y;
+    // Check if clicking on door marker (circle)
+    if (target.tagName === 'circle') {
+      const roomId = target.getAttribute('data-room-id');
+      const doorId = target.getAttribute('data-opening-id');
+      const type = target.getAttribute('data-opening-type');
+      if (roomId && doorId && type === 'door') {
+        handleDoorMarkerClick(e, roomId, doorId, target);
+        return;
       }
+    }
 
-      try {
-        roomBox.setPointerCapture(e.pointerId);
-      } catch (err) {}
-      
-      roomBox.classList.add('dragging');
-      dragState.isDragging = false; // True on first move
+    // Check if clicking on room box (rect)
+    if (target.tagName === 'rect') {
+      const roomId = target.getAttribute('data-room-id');
+      if (!roomId) return;
+
+      const selectedId = getSelectedRoomId();
+
+      // Tap = select/deselect room
+      setSelectedRoomId(selectedId === roomId ? null : roomId);
+      renderSVG();
+      renderRegistry();
+
+      // If now selected, prepare to drag
+      if (getSelectedRoomId() === roomId) {
+        e.preventDefault();
+        dragState.roomId = roomId;
+        dragState.pointerId = e.pointerId;
+        dragState.startClientX = e.clientX;
+        dragState.startClientY = e.clientY;
+        
+        const pos = getRoomPos(roomId);
+        if (pos) {
+          dragState.startRoomX = pos.x;
+          dragState.startRoomY = pos.y;
+        }
+
+        try {
+          svgEl.setPointerCapture(e.pointerId);
+        } catch (err) {
+          console.error('[plan2d] setPointerCapture failed:', err);
+        }
+        
+        target.classList.add('dragging');
+        dragState.isDragging = false;
+        console.log('[plan2d] Start drag:', roomId);
+      }
     }
   }
 
@@ -371,8 +671,9 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
     newX = snapped.x;
     newY = snapped.y;
 
-    // Update data (no render during drag)
+    // Update data and schedule render
     setRoomPos(dragState.roomId, newX, newY);
+    scheduleRender();
   }
 
   function onGlobalPointerUp(e) {
@@ -397,8 +698,10 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
 
     // Save and re-render if actually dragged
     if (wasDragging) {
+      console.log('[plan2d] End drag');
       onChange(getFloor());
-      render();
+      renderSVG();
+      renderRegistry();
     }
   }
 
@@ -435,7 +738,8 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
 
     const roomId = item.getAttribute('data-room-id');
     setSelectedRoomId(roomId);
-    render();
+    renderSVG();
+    renderRegistry();
   }
 
   // ========== PUBLIC API ==========
@@ -452,7 +756,8 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
 
     setSelectedRoomId(roomId) {
       setSelectedRoomId(roomId);
-      render();
+      renderSVG();
+      renderRegistry();
     },
 
     getSelectedRoomId() {

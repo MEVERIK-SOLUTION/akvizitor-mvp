@@ -349,6 +349,7 @@ input:focus, select:focus {
   width: 100%;
   height: auto;
   min-height: 100%;
+  pointer-events: all;
 }
 
 /* === RESPONSIVE 2D LAYOUT === */
@@ -564,6 +565,44 @@ input:focus, select:focus {
   stroke: rgba(59, 130, 246, 0.5);
   stroke-width: 2;
   stroke-dasharray: 4,4;
+  pointer-events: none;
+}
+.plan2d-door-marker {
+  fill: #dc2626;
+  stroke: #991b1b;
+  stroke-width: 1.5;
+  pointer-events: all;
+  cursor: pointer;
+}
+.plan2d-door-marker:hover {
+  fill: #ef4444;
+  stroke-width: 2;
+}
+.plan2d-door-marker.selected-door {
+  fill: #f59e0b;
+  stroke: #b45309;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6));
+}
+.plan2d-door-marker.linked-door {
+  fill: #10b981;
+  stroke: #059669;
+  stroke-width: 2;
+}
+.plan2d-window-marker {
+  fill: #3b82f6;
+  stroke: #1e40af;
+  stroke-width: 1;
+  pointer-events: none;
+}
+.plan2d-window {
+  stroke: #3b82f6;
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+.plan2d-link-line {
+  stroke: #28a745;
+  stroke-width: 2;
   pointer-events: none;
 }
 
