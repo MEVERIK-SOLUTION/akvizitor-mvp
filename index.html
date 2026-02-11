@@ -36,28 +36,28 @@
 
     <div class="layout">
       <aside class="sidebar card">
-        <h2 class="h2">Checklist</h2>
+        <h2 class="h2">Správa projektu</h2>
         <ul class="checklist" id="checklist">
           <li><span class="chk" data-chk="project"></span> Založen projekt</li>
           <li><span class="chk" data-chk="rooms"></span> Přidány místnosti</li>
           <li><span class="chk" data-chk="photos"></span> Fotky (volitelné)</li>
-          <li><span class="chk" data-chk="plan2d"></span> 2D půdorys (další krok)</li>
+          <li><span class="chk" data-chk="plan2d"></span> 2D půdorys</li>
           <li><span class="chk" data-chk="outputs"></span> Export výstupů</li>
         </ul>
 
         <div class="divider"></div>
 
-        <h2 class="h2">Rychlé akce</h2>
         <div class="stack">
           <button class="btn-secondary" id="quickExportProjectBtn" type="button">Export projektu (JSON)</button>
           <label class="btn-secondary filelike">
             Import projektu (JSON)
             <input id="quickImportInput" type="file" accept="application/json" hidden />
           </label>
+          <button class="btn-secondary" id="exportPdfBtn" type="button" disabled>Export PDF (brzy)</button>
         </div>
 
         <p class="hint">
-          Tip: bez backendu ukládáme lokálně a posíláme si projekty přes JSON. Později se to přepne na cloud.
+          Levý panel slouží pouze ke správě projektu. Workflow postup řeší hlavní CTA dole.
         </p>
       </aside>
 
@@ -70,9 +70,7 @@
             <p class="muted">Založ, otevři a spravuj projekty. Tohle je “domov” celé akvizice.</p>
           </div>
 
-          <div style="margin-top:12px">
-            <button id="continueToCollect" class="btn-primary">Pokračovat → Sběr</button>
-          </div>
+          <!-- ...existing code... -->
 
           <div class="grid2">
             <div>
@@ -95,12 +93,40 @@
                   </div>
                 </div>
 
-                <div class="form-group">
-                  <label for="projAddress">Adresa (volitelné)</label>
-                  <input id="projAddress" type="text" placeholder="Ulice, město…" />
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="clientFirstName">Jméno klienta</label>
+                    <input id="clientFirstName" type="text" placeholder="např. Jan" />
+                  </div>
+                  <div class="form-group">
+                    <label for="clientLastName">Příjmení klienta</label>
+                    <input id="clientLastName" type="text" placeholder="např. Novák" />
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="meetingDate">Datum schůzky</label>
+                    <input id="meetingDate" type="date" />
+                  </div>
+                  <div class="form-group">
+                    <label for="projAddress">Adresa (volitelné)</label>
+                    <input id="projAddress" type="text" placeholder="Ulice, město…" />
+                  </div>
                 </div>
 
                 <button class="btn-primary" type="submit">Vytvořit projekt</button>
+                          <!-- Project/client details summary -->
+                          <div class="project-details-summary">
+                            <div class="divider"></div>
+                            <h3 class="h3">Klient & schůzka</h3>
+                            <div class="details-row">
+                              <span id="summaryClientName">Jméno: <b>-</b></span>
+                              <span id="summaryClientSurname">Příjmení: <b>-</b></span>
+                              <span id="summaryMeetingDate">Datum schůzky: <b>-</b></span>
+                              <span id="summaryProjectType">Typ nemovitosti: <b>-</b></span>
+                            </div>
+                          </div>
               </form>
 
               <div class="divider"></div>
@@ -247,9 +273,7 @@
           </div>
         </section>
 
-        <div style="margin-top:12px;">
-          <button id="continueTo2D" class="btn-primary">Pokračovat → 2D</button>
-        </div>
+        <!-- ...existing code... -->
 
         <!-- VIEW: 2D -->
         <section class="view card" id="view-plan2d" hidden>
@@ -282,7 +306,7 @@
               </div>
             </div>
 
-            <!-- CANVAS & SIDEBAR (responsive) -->
+            <!-- CANVAS & ROOM LIST LAYOUT -->
             <div class="plan2d-container">
               <!-- CANVAS -->
               <div class="plan2d-main">
@@ -298,30 +322,24 @@
                 </div>
               </div>
 
-              <!-- ROOM REGISTRY (mobile sidebar) -->
-              <div class="plan2d-registry">
-                <div class="plan2d-registry-header">
-                  <h3 class="h3">Místnosti</h3>
-                  <button id="plan2dRegistryClose" class="btn-mini" type="button" title="Zavřít seznam">✕</button>
+              <!-- ROOM LIST: right panel (desktop), bottom sheet (mobile) -->
+              <aside class="plan2d-roomlist-panel">
+                <div class="plan2d-roomlist-header">
+                  <h3 class="h3">Seznam místností</h3>
+                  <button id="plan2dRoomlistClose" class="btn-mini" type="button" title="Zavřít seznam">✕</button>
                 </div>
                 <div id="plan2dRoomsList" class="plan2d-rooms-list">
                   <!-- dynamically rendered -->
                 </div>
-              </div>
+              </aside>
             </div>
 
-            <!-- MOBILE: toggle registry button -->
-            <button id="plan2dShowRegistry" class="plan2d-show-registry" type="button" hidden>
+            <!-- MOBILE: toggle room list sheet button -->
+            <button id="plan2dShowRoomlist" class="plan2d-show-roomlist" type="button" hidden>
               <span>📋</span> Místnosti
             </button>
 
-            <p class="hint" style="margin-top:12px; font-size:0.85rem;">
-              <b>Ovládání (desktop):</b> Klik = vybrat pokoji · Poklikat &amp; táhnout = posunout · <b>Ctrl + Scroll</b> = zoom · <b>Space + táh.</b> = pan ·
-              
-              <b style="display:block; margin-top:6px;">Ovládání (mobil):</b> Tap = vybrat pokoji · Long-press &amp; táh = posunout · Pinch = zoom · 2-finger = pan ·
-              
-              <b style="display:block; margin-top:6px;">Dveře:</b> Kliknout na marker = vytvořit odkaz
-            </p>
+            <!-- ...existing code... -->
           </div>
         </section>
 
@@ -330,7 +348,7 @@
           <div class="modal-backdrop"></div>
           <div class="modal-content card">
             <div class="modal-header">
-              <h3 id="openingsModalTitle">Detaily místnosti</h3>
+              <h3 id="openingsModalTitle">Otvory místnosti</h3>
               <button id="openingsModalClose" class="btn-mini" type="button">✕</button>
             </div>
             <div id="openingsModalBody" class="modal-body">
@@ -346,7 +364,7 @@
             <p class="muted">3D není CAD – je to rychlá validace proporcí. Přijde po 2D.</p>
           </div>
           <div class="placeholder">
-            <p><b>Stav:</b> připraveno. Po 2D půdorysu uděláme extruzi do jednoduchého 3D.</p>
+            <!-- ...existing code... -->
           </div>
         </section>
 
@@ -362,10 +380,7 @@
           </div>
 
           <div id="outputsContent" hidden>
-            <div class="stack">
-              <button class="btn-primary" id="exportProjectBtn" type="button">Export projektu (JSON)</button>
-              <button class="btn-secondary" id="exportRoomsCsvBtn" type="button">Export místností (CSV)</button>
-            </div>
+            <!-- ...existing code... -->
 
             <div class="divider"></div>
 
@@ -420,8 +435,7 @@
                 </select>
               </div>
 
-              <button type="submit" class="btn-primary">Spočítat orientační cenu</button>
-              <button type="button" id="resetBtn" class="btn-secondary">Resetovat</button>
+              <!-- ...existing code... -->
 
             </form>
           </section>
@@ -441,8 +455,25 @@
         </section>
 
         <footer class="app-footer">
-          <small>MEVERIK · AKVIZITOR MVP</small>
-        </footer>
+          <footer class="sticky-footer">
+            <!-- CTA buttons for each main view -->
+            <div id="cta-project" class="cta-block" hidden>
+              <button class="btn-primary cta" id="ctaProjectBtn">Pokračovat na sběr</button>
+            </div>
+            <div id="cta-collect" class="cta-block" hidden>
+              <button class="btn-primary cta" id="ctaCollectBtn">Pokračovat na 2D půdorys</button>
+            </div>
+            <div id="cta-plan2d" class="cta-block" hidden>
+              <button class="btn-primary cta" id="ctaPlan2dBtn">Pokračovat na 3D model</button>
+            </div>
+            <div id="cta-view3d" class="cta-block" hidden>
+              <button class="btn-primary cta" id="ctaView3dBtn">Pokračovat na výstupy</button>
+            </div>
+            <div id="cta-outputs" class="cta-block" hidden>
+              <button class="btn-primary cta" id="ctaOutputsBtn">Pokračovat na odhad</button>
+            </div>
+            <small>MEVERIK · AKVIZITOR MVP</small>
+          </footer>
       </section>
     </div>
   </main>

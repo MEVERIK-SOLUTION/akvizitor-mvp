@@ -311,26 +311,27 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
     const len = room.length;
     const wid = room.width;
 
-    if (wall === 'N' || wall === 'A') { // North/top
+    // Stěny jako dvojice vrcholů: AB=top, BC=right, CD=bottom, DA=left
+    if (wall === 'AB' || wall === 'A' || wall === 'N') { // top
       x1 = roomPos.x + offset;
       y1 = roomPos.y;
-      x2 = x1 + 0.1;
+      x2 = x1 + 0.08;
       y2 = y1;
-    } else if (wall === 'E' || wall === 'B') { // East/right
+    } else if (wall === 'BC' || wall === 'B' || wall === 'E') { // right
       x1 = roomPos.x + len;
       y1 = roomPos.y + offset;
       x2 = x1;
-      y2 = y1 + 0.1;
-    } else if (wall === 'S' || wall === 'C') { // South/bottom
+      y2 = y1 + 0.08;
+    } else if (wall === 'CD' || wall === 'C' || wall === 'S') { // bottom
       x1 = roomPos.x + offset;
       y1 = roomPos.y + wid;
-      x2 = x1 + 0.1;
+      x2 = x1 + 0.08;
       y2 = y1;
-    } else if (wall === 'W' || wall === 'D') { // West/left
+    } else if (wall === 'DA' || wall === 'D' || wall === 'W') { // left
       x1 = roomPos.x;
       y1 = roomPos.y + offset;
       x2 = x1;
-      y2 = y1 + 0.1;
+      y2 = y1 + 0.08;
     }
 
     if (x1 === undefined) return null;
@@ -419,7 +420,7 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
 
     // Clear selection after linking
     doorLinkingState.selectedDoor = null;
-    console.log('[plan2d] Doors linked:', selected.roomId, 'to', roomId);
+    console.log('[openings] door linked', selected.roomId + '->' + roomId);
 
     // Save and re-render
     onChange(getFloor());
@@ -428,10 +429,14 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
   }
 
   function areOppositeWalls(w1, w2) {
-    const normalize = (w) => String(w || 'N').toUpperCase();
+    const normalize = (w) => String(w || 'AB').toUpperCase();
     w1 = normalize(w1);
     w2 = normalize(w2);
-    return (w1 === 'N' && w2 === 'S') || (w1 === 'S' && w2 === 'N') ||
+    // Nový formát: AB (top), BC (right), CD (bottom), DA (left)
+    return (w1 === 'AB' && w2 === 'CD') || (w1 === 'CD' && w2 === 'AB') ||
+           (w1 === 'BC' && w2 === 'DA') || (w1 === 'DA' && w2 === 'BC') ||
+           // Starý formát pro backward compatibility
+           (w1 === 'N' && w2 === 'S') || (w1 === 'S' && w2 === 'N') ||
            (w1 === 'E' && w2 === 'W') || (w1 === 'W' && w2 === 'E') ||
            (w1 === 'A' && w2 === 'C') || (w1 === 'C' && w2 === 'A') ||
            (w1 === 'B' && w2 === 'D') || (w1 === 'D' && w2 === 'B');
@@ -519,16 +524,17 @@ function createPlan2DEditor({ svgEl, registryEl, zoomSliderEl, snapToggleEl, onC
     const roomWid = room.width;
 
     let cx, cy;
-    if (wall === 'N' || wall === 'A') {
+    // Nový formát: AB/BC/CD/DA + starý N/E/S/W a A/B/C/D
+    if (wall === 'AB' || wall === 'N' || wall === 'A') { // top
       cx = roomPos.x + offset + width / 2;
       cy = roomPos.y;
-    } else if (wall === 'S' || wall === 'C') {
+    } else if (wall === 'CD' || wall === 'S' || wall === 'C') { // bottom
       cx = roomPos.x + offset + width / 2;
       cy = roomPos.y + roomWid;
-    } else if (wall === 'E' || wall === 'B') {
+    } else if (wall === 'BC' || wall === 'E' || wall === 'B') { // right
       cx = roomPos.x + roomLen;
       cy = roomPos.y + offset + width / 2;
-    } else if (wall === 'W' || wall === 'D') {
+    } else if (wall === 'DA' || wall === 'W' || wall === 'D') { // left
       cx = roomPos.x;
       cy = roomPos.y + offset + width / 2;
     } else {

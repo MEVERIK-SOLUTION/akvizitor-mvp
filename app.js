@@ -566,7 +566,7 @@
               <div class="item-meta">${r.area.toLocaleString("cs-CZ")} m² · ${r.length}×${r.width} m${effH ? ` · výška ${effH} m` : ""} · fotek: ${(p.media?.photos || []).filter(ph => ph.roomId === r.id).length}</div>
             </div>
             <div class="item-actions">
-              <button class="btn-mini" data-room-openings="${r.id}">Detaily / Otvory</button>
+              <button class="btn-mini" data-room-openings="${r.id}">Otvory</button>
               <button class="btn-mini danger" data-room-del="${r.id}">Smazat</button>
             </div>
           </div>
@@ -684,9 +684,10 @@
     if (!p || !floor) return;
     const room = (floor.rooms || []).find(r => r.id === roomId);
     if (!room) return;
+    console.log('[openings-ui] modal open', roomId);
     ensureRoomOpenings(room);
     openingsEditingRoomId = roomId;
-    if (openingsModalTitle) openingsModalTitle.textContent = `Detaily: ${room.name}`;
+    if (openingsModalTitle) openingsModalTitle.textContent = `Otvory: ${room.name}`;
     renderOpeningsModal(room);
     if (openingsModal) {
       openingsModal.hidden = false;
@@ -719,104 +720,153 @@
     if (!openingsModalBody) return;
     ensureRoomOpenings(room);
     const openings = room.openings || { doors: [], windows: [] };
-    const doorsHtml = (openings.doors || []).map(d => `
-      <div class="openings-item">
-        <div><b>${escapeHtml(d.name || 'Dveře')}</b></div>
-        <div style="font-size:0.9rem">Stěna: ${d.wall} · Posun: ${d.offsetM} m · Šířka: ${d.widthM || 0.9} m</div>
-        <div style="margin-top:6px">
-          <button class="btn-mini" data-edit-door="${d.id}">Upravit</button>
-          <button class="btn-mini danger" data-del-door="${d.id}">Smazat</button>
+    const WALL_OPTS = ['AB', 'BC', 'CD', 'DA'];
+
+    // HTML pro dveře
+    const doorsHtml = (openings.doors || []).map(door => `
+      <div class="openings-item" data-type="door" data-id="${door.id}">
+        <div style="display:grid; grid-template-columns:1fr auto; gap:12px; align-items:start;">
+          <div>
+            <input type="text" data-field="name" placeholder="Název" value="${escapeHtml(door.name || 'Dveře')}" style="display:block; width:100%; padding:6px; margin-bottom:8px; border:1px solid #ddd; border-radius:4px; font-weight:600;">
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; font-size:0.85rem;">
+              <div>
+                <label style="display:block; margin-bottom:3px; font-size:0.75rem; color:#666;">Stěna</label>
+                <select data-field="wall" style="width:100%; padding:5px; border:1px solid #ddd; border-radius:3px;">${WALL_OPTS.map(w => `<option value="${w}" ${door.wall === w ? 'selected' : ''}>${w}</option>`).join('')}</select>
+              </div>
+              <div>
+                <label style="display:block; margin-bottom:3px; font-size:0.75rem; color:#666;">Offset (m)</label>
+                <input type="number" data-field="offsetM" step="0.01" min="0" value="${door.offsetM || 0}" style="width:100%; padding:5px; border:1px solid #ddd; border-radius:3px;">
+              </div>
+              <div>
+                <label style="display:block; margin-bottom:3px; font-size:0.75rem; color:#666;">Šírka (m)</label>
+                <input type="number" data-field="widthM" step="0.01" min="0.1" value="${door.widthM || 0.9}" style="width:100%; padding:5px; border:1px solid #ddd; border-radius:3px;">
+              </div>
+            </div>
+          </div>
+          <button class="btn-mini danger" data-del="${door.id}" style="white-space:nowrap; margin-top:24px;">Smazat</button>
         </div>
       </div>
     `).join("");
 
-    const windowsHtml = (openings.windows || []).map(w => `
-      <div class="openings-item">
-        <div><b>${escapeHtml(w.name || 'Okno')}</b></div>
-        <div style="font-size:0.9rem">Stěna: ${w.wall} · Posun: ${w.offsetM} m · Šířka: ${w.widthM || 1.0} m</div>
-        <div style="margin-top:6px">
-          <button class="btn-mini" data-edit-window="${w.id}">Upravit</button>
-          <button class="btn-mini danger" data-del-window="${w.id}">Smazat</button>
+    // HTML pro okna
+    const windowsHtml = (openings.windows || []).map(win => `
+      <div class="openings-item" data-type="window" data-id="${win.id}">
+        <div style="display:grid; grid-template-columns:1fr auto; gap:12px; align-items:start;">
+          <div>
+            <input type="text" data-field="name" placeholder="Název" value="${escapeHtml(win.name || 'Okno')}" style="display:block; width:100%; padding:6px; margin-bottom:8px; border:1px solid #ddd; border-radius:4px; font-weight:600;">
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; font-size:0.85rem;">
+              <div>
+                <label style="display:block; margin-bottom:3px; font-size:0.75rem; color:#666;">Stěna</label>
+                <select data-field="wall" style="width:100%; padding:5px; border:1px solid #ddd; border-radius:3px;">${WALL_OPTS.map(w => `<option value="${w}" ${win.wall === w ? 'selected' : ''}>${w}</option>`).join('')}</select>
+              </div>
+              <div>
+                <label style="display:block; margin-bottom:3px; font-size:0.75rem; color:#666;">Offset (m)</label>
+                <input type="number" data-field="offsetM" step="0.01" min="0" value="${win.offsetM || 0}" style="width:100%; padding:5px; border:1px solid #ddd; border-radius:3px;">
+              </div>
+              <div>
+                <label style="display:block; margin-bottom:3px; font-size:0.75rem; color:#666;">Šírka (m)</label>
+                <input type="number" data-field="widthM" step="0.01" min="0.1" value="${win.widthM || 1.2}" style="width:100%; padding:5px; border:1px solid #ddd; border-radius:3px;">
+              </div>
+            </div>
+          </div>
+          <button class="btn-mini danger" data-del="${win.id}" style="white-space:nowrap; margin-top:24px;">Smazat</button>
         </div>
       </div>
     `).join("");
 
     openingsModalBody.innerHTML = `
-      <div>
-        <div style="margin-bottom:8px;"><b>Výška místnosti (m)</b></div>
-        <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
-          <input id="roomHeightOverride" type="number" step="0.01" style="width:120px;" value="${room.height !== null && room.height !== undefined ? room.height : ''}">
-          <label style="font-size:0.9rem;">(nechte prázdné = použít výšku patra)</label>
-        </div>
+      <div style="max-height:60vh; overflow-y:auto;">
+        <h4 style="margin-bottom:12px;">Dveře</h4>
+        <div class="openings-list">${doorsHtml || '<div style="color:#999; font-size:0.9rem;">Žádné dveře</div>'}</div>
+        <button id="addDoorBtn" class="btn-mini" style="margin-top:12px;">+ Přidat dveře</button>
 
-        <div style="display:flex; gap:12px;">
-          <div style="flex:1">
-            <h4>Dveře</h4>
-            <div class="openings-list">${doorsHtml || '<div class="muted small">Žádné dveře</div>'}</div>
-            <div style="margin-top:8px;"><button id="addDoorBtn" class="btn-mini">+ Přidat dveře</button></div>
-          </div>
-          <div style="flex:1">
-            <h4>Okna</h4>
-            <div class="openings-list">${windowsHtml || '<div class="muted small">Žádná okna</div>'}</div>
-            <div style="margin-top:8px;"><button id="addWindowBtn" class="btn-mini">+ Přidat okno</button></div>
-          </div>
-        </div>
+        <hr style="margin:20px 0; border:none; border-top:1px solid #ddd;">
 
-        <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
-          <button id="saveOpeningsBtn" class="btn-primary">Uložit</button>
-          <button id="closeOpeningsBtn" class="btn-secondary">Zavřít</button>
-        </div>
+        <h4 style="margin-bottom:12px;">Okna</h4>
+        <div class="openings-list">${windowsHtml || '<div style="color:#999; font-size:0.9rem;">Žádná okna</div>'}</div>
+        <button id="addWindowBtn" class="btn-mini" style="margin-top:12px;">+ Přidat okno</button>
+      </div>
+
+      <div style="margin-top:16px; padding-top:12px; border-top:1px solid #ddd; display:flex; gap:8px; justify-content:flex-end;">
+        <button id="saveOpeningsBtn" class="btn-primary">Uložit</button>
+        <button id="closeOpeningsBtn" class="btn-secondary">Zavřít</button>
       </div>
     `;
 
-    // Bind add / delete / save
-    const addDoorBtn = $("#addDoorBtn");
-    const addWindowBtn = $("#addWindowBtn");
-    const saveOpeningsBtn = $("#saveOpeningsBtn");
-    const closeOpeningsBtn = $("#closeOpeningsBtn");
+    // Přidej dveře
+    const addDoorBtn = openingsModalBody.querySelector("#addDoorBtn");
+    if (addDoorBtn) {
+      addDoorBtn.addEventListener("click", () => {
+        const newDoor = { id: safeId(), name: 'Dveře', wall: 'AB', offsetM: 0, widthM: 0.9, link: null };
+        room.openings.doors.push(newDoor);
+        renderOpeningsModal(room);
+      });
+    }
 
-    if (addDoorBtn) addDoorBtn.addEventListener("click", () => {
-      const newDoor = { id: safeId(), name: 'Dveře', wall: 'N', offsetM: 0.5, widthM: 0.9 };
-      room.openings.doors.push(newDoor);
-      renderOpeningsModal(room);
-    });
+    // Přidej okno
+    const addWindowBtn = openingsModalBody.querySelector("#addWindowBtn");
+    if (addWindowBtn) {
+      addWindowBtn.addEventListener("click", () => {
+        const newWin = { id: safeId(), name: 'Okno', wall: 'AB', offsetM: 0, widthM: 1.2, link: null };
+        room.openings.windows.push(newWin);
+        renderOpeningsModal(room);
+      });
+    }
 
-    if (addWindowBtn) addWindowBtn.addEventListener("click", () => {
-      const newWin = { id: safeId(), name: 'Okno', wall: 'N', offsetM: 0.5, widthM: 1.0 };
-      room.openings.windows.push(newWin);
-      renderOpeningsModal(room);
-    });
-
-    if (saveOpeningsBtn) saveOpeningsBtn.addEventListener("click", () => {
-      const val = $("#roomHeightOverride")?.value;
-      room.height = (val === null || val === undefined || String(val).trim() === "") ? null : Number(val);
-      const p = getCurrentProject();
-      if (p) {
-        p.meta.updatedAt = new Date().toISOString();
-        upsertProject(p);
-      }
-      closeOpeningsModal();
-      renderCollectView();
-      if (state.activeView === 'plan2d') init2D();
-    });
-
-    if (closeOpeningsBtn) closeOpeningsBtn.addEventListener("click", closeOpeningsModal);
-
-    // Delete handlers
-    openingsModalBody.querySelectorAll('[data-del-door]').forEach(b => {
-      b.addEventListener('click', () => {
-        const id = b.getAttribute('data-del-door');
-        room.openings.doors = (room.openings.doors || []).filter(d => d.id !== id);
+    // Smaž otvor
+    openingsModalBody.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-del');
+        const item = btn.closest('.openings-item');
+        const type = item.getAttribute('data-type');
+        if (type === 'door') {
+          room.openings.doors = room.openings.doors.filter(d => d.id !== id);
+        } else {
+          room.openings.windows = room.openings.windows.filter(w => w.id !== id);
+        }
         renderOpeningsModal(room);
       });
     });
-    openingsModalBody.querySelectorAll('[data-del-window]').forEach(b => {
-      b.addEventListener('click', () => {
-        const id = b.getAttribute('data-del-window');
-        room.openings.windows = (room.openings.windows || []).filter(w => w.id !== id);
-        renderOpeningsModal(room);
+
+    // Real-time editace polí
+    openingsModalBody.querySelectorAll('[data-field]').forEach(input => {
+      input.addEventListener('change', () => {
+        const item = input.closest('.openings-item');
+        const type = item.getAttribute('data-type');
+        const id = item.getAttribute('data-id');
+        const field = input.getAttribute('data-field');
+        const val = input.value;
+        if (type === 'door') {
+          const d = room.openings.doors.find(x => x.id === id);
+          if (d) d[field] = (field === 'wall') ? val : Number(val);
+        } else {
+          const w = room.openings.windows.find(x => x.id === id);
+          if (w) w[field] = (field === 'wall') ? val : Number(val);
+        }
       });
     });
+
+    // Ulož projekt
+    const saveBtn = openingsModalBody.querySelector("#saveOpeningsBtn");
+    if (saveBtn) {
+      saveBtn.addEventListener("click", () => {
+        const p = getCurrentProject();
+        if (p) {
+          p.meta.updatedAt = new Date().toISOString();
+          upsertProject(p);
+          console.log('[openings] saved', openingsEditingRoomId, room.openings.doors.length, room.openings.windows.length);
+        }
+        closeOpeningsModal();
+        renderCollectView();
+        if (state.activeView === 'plan2d') init2D();
+      });
+    }
+
+    // Zavři modal
+    const closeBtn = openingsModalBody.querySelector("#closeOpeningsBtn");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", closeOpeningsModal);
+    }
   }
 
   // === 2D EDITOR INITIALIZATION ===
